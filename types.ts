@@ -12,6 +12,14 @@ export enum LeagueTier {
   DIAMOND = 'Diamond'
 }
 
+export interface Badge {
+  id: string;
+  title: string;
+  emoji: string;
+  description: string;
+  unlockedAt?: string;
+}
+
 export interface FeedbackEntry {
   id: string;
   date: string;
@@ -22,7 +30,7 @@ export interface FeedbackEntry {
 export interface GardenPlant {
   id: string;
   type: string; // 🌸, 🌿, 🌳, 🌻, 🌵
-  category?: string; // 식물이 어떤 활동으로 자라났는지 기록
+  category?: string;
   position: number;
   grownAt: string;
 }
@@ -44,6 +52,7 @@ export interface User {
     streakFreeze: number;
   };
   garden: GardenPlant[];
+  unlockedBadges: string[]; // 뱃지 ID 리스트
 }
 
 export interface Friend {
@@ -70,7 +79,7 @@ export interface MicroTask {
   id: string;
   macroTaskId: string;
   title: string;
-  category?: string; // 상위 태스크의 카테고리 전파
+  category?: string;
   orderIndex: number;
   durationEstMin: number;
   difficulty: number;

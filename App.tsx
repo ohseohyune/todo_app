@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout.tsx';
-import { User, MacroTask, MicroTask, TaskStatus, LeagueTier, DailyQuest, Friend, FeedbackEntry, GardenPlant } from './types.ts';
+import { User, MacroTask, MicroTask, TaskStatus, LeagueTier, DailyQuest, Friend, FeedbackEntry, GardenPlant, Badge } from './types.ts';
 import { decomposeTask, getAIAdvice } from './services/geminiService.ts';
 
 // Screens
@@ -13,14 +13,20 @@ import ProfileScreen from './screens/ProfileScreen.tsx';
 import FriendsScreen from './screens/FriendsScreen.tsx';
 import ShopScreen from './screens/ShopScreen.tsx';
 
-const STORAGE_KEY = 'quest_todo_data_v2';
+const STORAGE_KEY = 'quest_todo_data_v3';
+
+export const ALL_BADGES: Badge[] = [
+  { id: 'first_step', title: '첫 걸음', emoji: '👣', description: '첫 번째 마이크로 퀘스트 완료' },
+  { id: 'streak_3', title: '작심삼일 격파', emoji: '🔥', description: '3일 연속 스트릭 달성' },
+  { id: 'night_owl', title: '밤의 지배자', emoji: '🦉', description: '자정 이후에 퀘스트 완료' },
+  { id: 'garden_master', title: '정원사', emoji: '👩‍🌾', description: '정원에 식물 5개 심기' },
+];
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [cheerNotification, setCheerNotification] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // State
   const [user, setUser] = useState<User>({
     id: '1',
     nickname: '퀘스트마스터',
@@ -35,15 +41,11 @@ const App: React.FC = () => {
     receivedCheers: 0,
     totalCompletedTasks: 0,
     inventory: { streakFreeze: 0 },
-    garden: []
+    garden: [],
+    unlockedBadges: []
   });
 
-  const [friends, setFriends] = useState<Friend[]>([
-    { id: 'f1', nickname: '알파고', level: 24, streakCount: 15, currentTaskTitle: '머신러닝 논문 읽기', avatar: '🤖', lastActive: '방금 전', cheeredToday: false },
-    { id: 'f2', nickname: '김열정', level: 8, streakCount: 3, currentTaskTitle: '아침 조깅 5km', avatar: '🏃', lastActive: '10분 전', cheeredToday: false },
-    { id: 'f3', nickname: '도서관장', level: 19, streakCount: 42, currentTaskTitle: '고전 인문학 필사', avatar: '📚', lastActive: '1시간 전', cheeredToday: false },
-  ]);
-
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [macroTasks, setMacroTasks] = useState<MacroTask[]>([]);
   const [microTasks, setMicroTasks] = useState<MicroTask[]>([]);
   const [dailyQuests, setDailyQuests] = useState<DailyQuest[]>([
@@ -59,13 +61,13 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setUser(parsed.user);
-        setFriends(parsed.friends);
-        setMacroTasks(parsed.macroTasks);
-        setMicroTasks(parsed.microTasks);
-        setDailyQuests(parsed.dailyQuests);
+        if (parsed.user) setUser(parsed.user);
+        if (parsed.friends) setFriends(parsed.friends);
+        if (parsed.macroTasks) setMacroTasks(parsed.macroTasks);
+        if (parsed.microTasks) setMicroTasks(parsed.microTasks);
+        if (parsed.dailyQuests) setDailyQuests(parsed.dailyQuests);
       } catch (e) {
-        console.error("저장된 데이터를 불러오는 데 실패했습니다.");
+        console.error("Data load failed.");
       }
     }
     setIsLoaded(true);
@@ -79,12 +81,29 @@ const App: React.FC = () => {
     }
   }, [user, friends, macroTasks, microTasks, dailyQuests, isLoaded]);
 
-  useEffect(() => {
-    const newLevel = Math.floor(user.totalXP / 1000) + 1;
-    if (newLevel > user.level) {
-      setUser(prev => ({ ...prev, level: newLevel }));
+  // 업적 체크 로직
+  const checkAchievements = (updatedUser: User) => {
+    const newBadges = [...updatedUser.unlockedBadges];
+    let changed = false;
+
+    if (!newBadges.includes('first_step') && updatedUser.totalCompletedTasks >= 1) {
+      newBadges.push('first_step');
+      changed = true;
     }
-  }, [user.totalXP]);
+    if (!newBadges.includes('streak_3') && updatedUser.streakCount >= 3) {
+      newBadges.push('streak_3');
+      changed = true;
+    }
+    if (!newBadges.includes('garden_master') && updatedUser.garden.length >= 5) {
+      newBadges.push('garden_master');
+      changed = true;
+    }
+
+    if (changed) {
+      setUser(prev => ({ ...prev, unlockedBadges: newBadges }));
+      setCheerNotification("새로운 업적을 달성했습니다! 프로필을 확인하세요. 🏆");
+    }
+  };
 
   const handleTaskComplete = (microTaskId: string) => {
     const taskIndex = microTasks.findIndex(t => t.id === microTaskId);
@@ -101,38 +120,32 @@ const App: React.FC = () => {
     const isNewDay = !user.lastActiveDate || new Date(user.lastActiveDate).toDateString() !== now.toDateString();
     
     let newStreak = user.streakCount;
-    if (isNewDay) {
-      newStreak += 1;
-    }
+    if (isNewDay) newStreak += 1;
 
     let newGarden = [...user.garden];
     if (Math.random() > 0.4 && newGarden.length < 12) {
-      let plantEmoji = '🌿';
-      const category = completedTask.category || '일반';
-      
-      if (category === '업무') plantEmoji = '🌳';
-      else if (category === '공부') plantEmoji = '🌸';
-      else if (category === '건강') plantEmoji = '🌵';
-      else if (category === '집안일') plantEmoji = '🌻';
-
+      const plantEmoji = completedTask.category === '업무' ? '🌳' : completedTask.category === '공부' ? '🌸' : '🌿';
       newGarden.push({
         id: Math.random().toString(),
         type: plantEmoji,
-        category: category,
+        category: completedTask.category,
         position: Math.floor(Math.random() * 12),
         grownAt: now.toISOString()
       });
     }
 
-    setUser(prev => ({ 
-      ...prev, 
-      totalXP: prev.totalXP + gainedXP,
-      totalCompletedTasks: prev.totalCompletedTasks + 1,
+    const updatedUser = { 
+      ...user, 
+      totalXP: user.totalXP + gainedXP,
+      totalCompletedTasks: user.totalCompletedTasks + 1,
       streakCount: newStreak,
-      maxStreak: Math.max(prev.maxStreak, newStreak),
+      maxStreak: Math.max(user.maxStreak, newStreak),
       lastActiveDate: now.toISOString(),
       garden: newGarden
-    }));
+    };
+    
+    setUser(updatedUser);
+    checkAchievements(updatedUser);
 
     setDailyQuests(prev => prev.map(q => {
       if (q.id === 'q1') return { ...q, currentValue: Math.min(q.targetValue, q.currentValue + 1), completed: q.currentValue + 1 >= q.targetValue };
@@ -141,171 +154,56 @@ const App: React.FC = () => {
     }));
 
     const nextTask = updatedMicroTasks.find(t => t.status === TaskStatus.TODO);
-    if (nextTask) {
-      setCurrentQuest(nextTask);
-    } else {
+    if (nextTask) setCurrentQuest(nextTask);
+    else {
       setCurrentQuest(null);
       setActiveTab('home');
     }
   };
 
-  const handleCheerFriend = (friendId: string) => {
-    const friendIndex = friends.findIndex(f => f.id === friendId);
-    if (friendIndex !== -1 && !friends[friendIndex].cheeredToday) {
-      const updatedFriends = [...friends];
-      updatedFriends[friendIndex] = { ...friends[friendIndex], cheeredToday: true };
-      setFriends(updatedFriends);
-      setUser(prev => ({ ...prev, totalXP: prev.totalXP + 2 }));
-      
-      setDailyQuests(prev => prev.map(q => 
-        q.id === 'q3' ? { ...q, currentValue: 1, completed: true } : q
-      ));
-    }
-  };
+  const moveTask = (id: string, direction: 'up' | 'down') => {
+    const index = microTasks.findIndex(t => t.id === id);
+    if (index === -1) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === microTasks.length - 1) return;
 
-  const handleBuyItem = (itemType: string, cost: number) => {
-    if (user.totalXP >= cost) {
-      setUser(prev => ({
-        ...prev,
-        totalXP: prev.totalXP - cost,
-        inventory: {
-          ...prev.inventory,
-          streakFreeze: prev.inventory.streakFreeze + (itemType === 'freeze' ? 1 : 0)
-        }
-      }));
-      return true;
-    }
-    return false;
+    const newTasks = [...microTasks];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    [newTasks[index], newTasks[swapIndex]] = [newTasks[swapIndex], newTasks[index]];
+    setMicroTasks(newTasks);
   };
 
   const handleCreateMacroTask = async (title: string, category: string): Promise<boolean> => {
-    // 사용자의 레벨과 스트릭 정보를 넘겨서 시간을 더 스마트하게 계산하게 합니다.
-    const micros = await decomposeTask(title, category, { 
-      level: user.level, 
-      streak: user.streakCount 
-    });
-
+    const micros = await decomposeTask(title, category, { level: user.level, streak: user.streakCount });
     if (micros.length === 0) {
-      // AI 분해에 실패했을 때 처리
-      alert("현재 AI가 너무 바쁘네요! 😭 (할당량 초과)\n잠시 후(약 1분 뒤) 다시 시도해 주세요.");
-      return false; // 실패 반환
+      alert("AI 할당량 초과! 1분 뒤 시도하세요.");
+      return false;
     }
-
-    const newMacro: MacroTask = {
-      id: Math.random().toString(36).substr(2, 9),
-      title,
-      category,
-      createdAt: new Date().toISOString(),
-      status: TaskStatus.TODO
-    };
+    const newMacro: MacroTask = { id: Math.random().toString(36).substr(2, 9), title, category, createdAt: new Date().toISOString(), status: TaskStatus.TODO };
     setMacroTasks(prev => [...prev, newMacro]);
-    
-    const fullMicros = micros.map(m => ({ 
-      ...m, 
-      macroTaskId: newMacro.id, 
-      category: category,
-      status: TaskStatus.TODO 
-    } as MicroTask));
+    const fullMicros = micros.map(m => ({ ...m, macroTaskId: newMacro.id, category, status: TaskStatus.TODO } as MicroTask));
     setMicroTasks(prev => [...prev, ...fullMicros]);
-    
     if (!currentQuest && fullMicros.length > 0) {
       setCurrentQuest(fullMicros[0]);
       setActiveTab('play');
-    } else {
-      setActiveTab('home');
-    }
-    return true; // 성공 반환
-  };
-
-  const handleUpdateProfile = (nickname: string, avatar: string) => {
-    setUser(prev => ({ ...prev, nickname, avatar }));
-  };
-
-  const handleAddFeedback = async (reflection: string) => {
-    const advice = await getAIAdvice(reflection, {
-      level: user.level,
-      streakCount: user.streakCount,
-      totalXP: user.totalXP
-    });
-    
-    const newEntry: FeedbackEntry = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toLocaleDateString(),
-      userReflection: reflection,
-      aiAdvice: advice
-    };
-    
-    setUser(prev => ({
-      ...prev,
-      feedbackHistory: [newEntry, ...prev.feedbackHistory]
-    }));
-  };
-
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 'home':
-        return (
-          <HomeScreen 
-            user={user} 
-            microTasks={microTasks}
-            dailyQuests={dailyQuests}
-            onStartQuest={(quest) => {
-              setCurrentQuest(quest);
-              setActiveTab('play');
-            }}
-            cheerNotification={cheerNotification}
-            onClearNotification={() => setCheerNotification(null)}
-          />
-        );
-      case 'friends':
-        return (
-          <FriendsScreen 
-            friends={friends} 
-            onAddFriend={(input) => {
-              const newFriend: Friend = {
-                id: Math.random().toString(),
-                nickname: input,
-                level: 1,
-                streakCount: 0,
-                avatar: '🌱',
-                lastActive: '방금 전',
-                cheeredToday: false
-              };
-              setFriends([newFriend, ...friends]);
-            }}
-            onCheerFriend={handleCheerFriend}
-          />
-        );
-      case 'input':
-        return <TaskInputScreen onCreate={handleCreateMacroTask} user={user} />;
-      case 'shop':
-        return <ShopScreen user={user} onBuyItem={handleBuyItem} />;
-      case 'play':
-        return currentQuest ? (
-          <QuestPlayScreen 
-            quest={currentQuest} 
-            onComplete={() => handleTaskComplete(currentQuest.id)}
-            onTooHard={() => alert("AI가 난이도를 조정 중입니다... (현재 데모 버전)")}
-          />
-        ) : <HomeScreen user={user} microTasks={microTasks} dailyQuests={dailyQuests} onStartQuest={setCurrentQuest} />;
-      case 'league':
-        return <LeagueScreen user={user} />;
-      case 'profile':
-        return (
-          <ProfileScreen 
-            user={user} 
-            onUpdateProfile={handleUpdateProfile}
-            onAddFeedback={handleAddFeedback}
-          />
-        );
-      default:
-        return <HomeScreen user={user} microTasks={microTasks} dailyQuests={dailyQuests} onStartQuest={setCurrentQuest} />;
-    }
+    } else setActiveTab('home');
+    return true;
   };
 
   return (
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-      {renderScreen()}
+      {(() => {
+        switch (activeTab) {
+          case 'home': return <HomeScreen user={user} microTasks={microTasks} dailyQuests={dailyQuests} onStartQuest={setCurrentQuest} onMoveTask={moveTask} cheerNotification={cheerNotification} onClearNotification={() => setCheerNotification(null)} />;
+          case 'friends': return <FriendsScreen friends={friends} onAddFriend={(input) => setFriends([{ id: Math.random().toString(), nickname: input, level: 1, streakCount: 0, avatar: '🌱', lastActive: '방금 전', cheeredToday: false }, ...friends])} onCheerFriend={(id) => { setFriends(friends.map(f => f.id === id ? { ...f, cheeredToday: true } : f)); setUser(prev => ({ ...prev, totalXP: prev.totalXP + 2 })); }} />;
+          case 'input': return <TaskInputScreen onCreate={handleCreateMacroTask} user={user} />;
+          case 'shop': return <ShopScreen user={user} onBuyItem={(type, cost) => { if (user.totalXP >= cost) { setUser(prev => ({ ...prev, totalXP: prev.totalXP - cost, inventory: { ...prev.inventory, streakFreeze: prev.inventory.streakFreeze + (type === 'freeze' ? 1 : 0) } })); return true; } return false; }} />;
+          case 'play': return currentQuest ? <QuestPlayScreen quest={currentQuest} onComplete={() => handleTaskComplete(currentQuest.id)} onTooHard={() => alert("AI가 난이도를 조정 중...")} /> : <HomeScreen user={user} microTasks={microTasks} dailyQuests={dailyQuests} onStartQuest={setCurrentQuest} onMoveTask={moveTask} />;
+          case 'league': return <LeagueScreen user={user} />;
+          case 'profile': return <ProfileScreen user={user} onUpdateProfile={(n, a) => setUser(prev => ({ ...prev, nickname: n, avatar: a }))} onAddFeedback={async (r) => { const advice = await getAIAdvice(r, user); setUser(prev => ({ ...prev, feedbackHistory: [{ id: Math.random().toString(36).substr(2, 9), date: new Date().toLocaleDateString(), userReflection: r, aiAdvice: advice }, ...prev.feedbackHistory] })); }} />;
+          default: return null;
+        }
+      })()}
     </Layout>
   );
 };

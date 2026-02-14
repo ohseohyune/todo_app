@@ -19,13 +19,12 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
     }
   };
 
-  // 친구들의 총 레벨 합계를 영향력으로 계산 (동적 수치)
   const totalCohortImpact = friends.reduce((acc, f) => acc + f.level + f.streakCount, 0);
 
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn h-full">
-      {/* 1. 친구 추가 섹션 */}
-      <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-2 border-[#1E3614] relative overflow-hidden">
+    <div className="flex flex-col gap-6 animate-fadeIn h-full pb-10">
+      {/* 1. 친구 추가 섹션 - 배경과 입력창 대비 강화 */}
+      <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-4 border-[#1E3614] relative overflow-hidden">
         <h2 className="text-2xl font-black text-[#3D2B1F] mb-1">친구 찾기</h2>
         <p className="text-xs font-bold text-[#3D2B1F66] mb-4 uppercase tracking-widest">Connect with Cohorts</p>
         
@@ -34,12 +33,12 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
             type="text" 
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="ID 또는 전화번호 입력"
-            className="flex-1 bg-[#F4F2F0] p-3 rounded-xl border-2 border-transparent focus:border-[#2D4F1E] outline-none text-sm font-bold text-[#3D2B1F]"
+            placeholder="ID 또는 전화번호"
+            className="flex-1 bg-[#F4F2F0] p-3 rounded-xl border-2 border-[#3D2B1F11] focus:border-[#2D4F1E] focus:bg-white outline-none text-sm font-bold text-[#3D2B1F] placeholder:text-gray-400"
           />
           <button 
             type="submit"
-            className="bg-[#2D4F1E] text-white px-4 rounded-xl font-black text-sm shadow-[0_2px_0_#1E3614] active:translate-y-0.5 active:shadow-none"
+            className="bg-[#2D4F1E] text-white px-5 rounded-xl font-black text-sm shadow-[0_2px_0_#1E3614] active:translate-y-0.5 active:shadow-none"
           >
             추가
           </button>
@@ -56,9 +55,9 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
         <div className="flex flex-col gap-3">
           {friends.length > 0 ? (
             friends.map((friend) => (
-              <div key={friend.id} className="bg-white p-4 rounded-3xl border-2 border-white/10 shadow-sm flex items-center gap-4 group hover:border-[#2D4F1E] transition-all">
+              <div key={friend.id} className="bg-white p-4 rounded-3xl border-2 border-white/10 shadow-sm flex items-center gap-4 group">
                 <div className="relative">
-                  <div className="w-12 h-12 bg-[#F4F2F0] rounded-2xl flex items-center justify-center text-2xl border-2 border-white group-hover:bg-[#2D4F1E11] transition-colors">
+                  <div className="w-12 h-12 bg-[#F4F2F0] rounded-2xl flex items-center justify-center text-2xl border-2 border-white">
                     {friend.avatar}
                   </div>
                   <div className="absolute -bottom-1 -right-1 bg-[#2D4F1E] text-white text-[8px] font-black px-1 rounded-full border border-white">
@@ -73,31 +72,21 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
                       🔥 {friend.streakCount}
                     </span>
                   </div>
-                  
-                  <div className="mt-1 flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full led-blink"></div>
-                      <p className="text-[10px] font-bold text-[#2D4F1E] truncate max-w-[150px]">
-                        {friend.currentTaskTitle || '시스템 대기 중...'}
-                      </p>
-                    </div>
-                    <p className="text-[8px] font-bold text-[#3D2B1F33] uppercase mt-0.5 ml-3">
-                      {friend.lastActive} 활성
-                    </p>
-                  </div>
+                  <p className="text-[10px] font-bold text-[#2D4F1E] opacity-60">
+                    {friend.currentTaskTitle || '시스템 대기 중...'}
+                  </p>
                 </div>
 
                 <button 
                   onClick={() => onCheerFriend(friend.id)}
                   disabled={friend.cheeredToday}
-                  className={`w-10 h-10 rounded-full flex flex-col items-center justify-center transition-all border shadow-sm ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border ${
                     friend.cheeredToday 
-                    ? 'bg-[#2D4F1E11] border-[#2D4F1E44] text-[#2D4F1E44] cursor-default' 
-                    : 'bg-[#3D2B1F08] border-[#3D2B1F11] hover:bg-[#2D4F1E11] active:scale-90 text-[#3D2B1F]'
+                    ? 'bg-[#2D4F1E11] text-[#2D4F1E44]' 
+                    : 'bg-[#F4F2F0] border-gray-200 text-[#3D2B1F]'
                   }`}
                 >
                   <span className="text-sm">{friend.cheeredToday ? '✨' : '🙌'}</span>
-                  {!friend.cheeredToday && <span className="text-[6px] font-black">+2XP</span>}
                 </button>
               </div>
             ))
@@ -110,17 +99,16 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
         </div>
       </section>
 
-      {/* 친구들의 성공 통계 (동기부여 섹션) */}
-      <div className="bg-[#3D2B1F] p-4 rounded-2xl border-2 border-[#1E3614] flex items-center justify-between shadow-xl">
-        <div className="flex flex-col">
-          <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Cohort Impact</span>
-          <p className="text-xs text-white font-bold">내 코호트는 오늘 총 <span className="text-green-400">{totalCohortImpact}</span>의 가중치를 달성했습니다!</p>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-black text-[#A7C957]">Live</span>
+      {/* 친구들의 성공 통계 */}
+      {friends.length > 0 && (
+        <div className="bg-[#3D2B1F] p-4 rounded-2xl border-2 border-[#1E3614] flex items-center justify-between shadow-xl">
+          <div className="flex flex-col">
+            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Cohort Impact</span>
+            <p className="text-xs text-white font-bold">내 코호트의 오늘 영향력: <span className="text-green-400">{totalCohortImpact}</span></p>
+          </div>
           <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
