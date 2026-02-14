@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MicroTask } from '../types';
 
 interface QuestPlayScreenProps {
   quest: MicroTask;
-  onComplete: () => void;
+  onComplete: (actualMin: number) => void;
   onTooHard: () => void;
 }
 
@@ -13,21 +13,37 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
   const [isActive, setIsActive] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
+  
+  // 실제 소요 시간 측정을 위한 변수
+  const startTimeRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     setTimeLeft(quest.durationEstMin * 60);
     setIsActive(false);
     setShowConfetti(false);
     setIsFinishing(false);
+    setElapsedSeconds(0);
+    startTimeRef.current = null;
   }, [quest.id]);
 
   useEffect(() => {
     let interval: any = null;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+    if (isActive) {
+      interval = setInterval(() => {
+        setTimeLeft((t) => Math.max(0, t - 1));
+        setElapsedSeconds((s) => s + 1);
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
+  }, [isActive]);
+
+  const handleStart = () => {
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now();
+    }
+    setIsActive(!isActive);
+  };
 
   const handleComplete = () => {
     if ('vibrate' in navigator) {
@@ -35,7 +51,11 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
     }
     setIsFinishing(true);
     setShowConfetti(true);
-    setTimeout(() => onComplete(), 2000);
+    
+    // 분 단위로 계산 (최소 1분 보장)
+    const actualMin = Math.max(1, Math.round(elapsedSeconds / 60));
+    
+    setTimeout(() => onComplete(actualMin), 2000);
   };
 
   return (
@@ -47,6 +67,9 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
         <h2 className="text-2xl font-black mt-3 leading-tight tracking-tight text-white">
           {quest.title}
         </h2>
+        <div className="mt-1 text-[10px] text-white/40 font-bold">
+          목표 시간: {quest.durationEstMin}분 • 현재 경과: {Math.floor(elapsedSeconds / 60)}분
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col justify-center items-center gap-6 relative py-4">
@@ -81,10 +104,10 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
       </div>
 
       <div className="mt-8 mb-6 flex flex-col gap-3 px-2">
-        <button onClick={() => setIsActive(!isActive)} className={`py-4 rounded-2xl font-black text-lg transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]'}`}>
+        <button onClick={handleStart} className={`py-4 rounded-2xl font-black text-lg transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]'}`}>
           {isActive ? '잠시 멈춤' : '몰입 시작 🚀'}
         </button>
-        <button onClick={handleComplete} disabled={isFinishing} className={`py-4 rounded-2xl font-black text-xl shadow-xl transition-all ${isFinishing ? 'bg-green-500 text-white' : 'bg-white text-[#2D4F1E] active:translate-y-1'}`}>
+        <button onClick={handleComplete} disabled={isFinishing || elapsedSeconds < 5} className={`py-4 rounded-2xl font-black text-xl shadow-xl transition-all ${isFinishing ? 'bg-green-500 text-white' : 'bg-white text-[#2D4F1E] active:translate-y-1'}`}>
           {isFinishing ? '참 잘했어요! ✨' : '완료했습니다!'}
         </button>
       </div>

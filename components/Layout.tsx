@@ -10,8 +10,8 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const tabs = [
     { id: 'home', icon: '🏠', label: '홈' },
-    { id: 'friends', icon: '👥', label: '친구' },
     { id: 'input', icon: '➕', label: '퀘스트' },
+    { id: 'friends', icon: '👥', label: '친구' },
     { id: 'shop', icon: '🎁', label: '상점' },
     { id: 'league', icon: '🏆', label: '리그' },
     { id: 'profile', icon: '👤', label: '상태' },

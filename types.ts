@@ -44,8 +44,7 @@ export interface User {
   lastActiveDate: string | null;
   level: number;
   totalXP: number;
-  totalFocusMinutes: number; // 새 필드: 총 집중 시간
-  // Added leagueTier to match usage in App.tsx and LeagueScreen.tsx
+  totalFocusMinutes: number;
   leagueTier: LeagueTier;
   feedbackHistory: FeedbackEntry[];
   receivedCheers: number;
@@ -55,6 +54,8 @@ export interface User {
   };
   garden: GardenPlant[];
   unlockedBadges: string[];
+  // 새 필드: 시간 예측 정확도 (최근 완료 태스크들의 실제/예상 비율 평균)
+  recentAccuracyRatio?: number; 
 }
 
 export interface Friend {
@@ -84,6 +85,7 @@ export interface MicroTask {
   category?: string;
   orderIndex: number;
   durationEstMin: number;
+  actualDurationMin?: number; // 새 필드: 실제 걸린 시간
   difficulty: number;
   frictionScore: number;
   xpReward: number;
