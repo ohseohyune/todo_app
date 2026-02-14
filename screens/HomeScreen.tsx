@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, MicroTask, DailyQuest, TaskStatus } from '../types';
 
 interface HomeScreenProps {
@@ -17,6 +17,32 @@ interface HomeScreenProps {
 const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, onStartQuest, onMoveTask, cheerNotification, onClearNotification, onGoToTab, onResetQuests }) => {
   const reflectionQuest = dailyQuests.find(q => q.id === 'q3');
   const isReflectionDone = reflectionQuest?.completed;
+
+  // 2단계 리셋 확인 상태
+  const [resetConfirmMode, setResetConfirmMode] = useState(false);
+
+  useEffect(() => {
+    let timer: any;
+    if (resetConfirmMode) {
+      // 3초 후 확인 모드 자동 해제
+      timer = setTimeout(() => setResetConfirmMode(false), 3000);
+    }
+    return () => clearTimeout(timer);
+  }, [resetConfirmMode]);
+
+  const handleResetClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!resetConfirmMode) {
+      setResetConfirmMode(true);
+    } else {
+      if (onResetQuests) {
+        onResetQuests();
+        setResetConfirmMode(false);
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -48,22 +74,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, 
         </div>
       </div>
 
-      {/* 데일리 퀘스트 섹션 (리셋 버튼 포함) */}
-      <section className="bg-white/10 p-5 rounded-[2.5rem] border-2 border-white/10 relative overflow-hidden">
-        <div className="flex justify-between items-center mb-4 relative z-50">
+      {/* 데일리 퀘스트 섹션 (강화된 리셋 버튼) */}
+      <section className="bg-white/10 p-5 rounded-[2.5rem] border-2 border-white/10 relative">
+        <div className="flex justify-between items-center mb-4 relative z-[60]">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-black text-white uppercase tracking-widest">Daily Quests</h3>
           </div>
           <button 
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onResetQuests) onResetQuests();
-            }}
-            className="text-[10px] font-black text-[#3D2B1F] bg-[#A7C957] border-2 border-[#1E3614] px-4 py-2 rounded-full shadow-[0_4px_0_#1E3614] hover:bg-[#B7D967] active:translate-y-1 active:shadow-none transition-all pointer-events-auto cursor-pointer z-[100]"
+            onClick={handleResetClick}
+            className={`text-[10px] font-black px-4 py-2 rounded-full transition-all duration-300 shadow-[0_4px_0_#1E3614] active:translate-y-1 active:shadow-none pointer-events-auto cursor-pointer ${
+              resetConfirmMode 
+              ? 'bg-red-500 text-white animate-pulse scale-110' 
+              : 'bg-[#A7C957] text-[#1E3614]'
+            }`}
           >
-            🔄 퀘스트 리셋
+            {resetConfirmMode ? "⚠️ 진짜 리셋?" : "🔄 퀘스트 리셋"}
           </button>
         </div>
         <div className="space-y-3 relative z-10">
@@ -87,7 +113,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, 
         </div>
       </section>
 
-      {/* 성찰 알림 (학습 루프 강화) */}
+      {/* 성찰 알림 */}
       {!isReflectionDone && (
         <button 
           onClick={() => onGoToTab?.('profile')}

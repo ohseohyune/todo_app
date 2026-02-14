@@ -73,12 +73,10 @@ const App: React.FC = () => {
     let updatedUser = { ...savedUser };
     let updatedQuests = [...savedQuests];
 
-    // 날짜가 바뀌었으면 데일리 퀘스트 리셋
     if (todayStr !== lastDateStr) {
       updatedQuests = INITIAL_DAILY_QUESTS.map(q => ({ ...q }));
     }
 
-    // 스트릭 유지 여부 판단
     const yesterday = new Date();
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toDateString();
@@ -97,23 +95,19 @@ const App: React.FC = () => {
   }, []);
 
   const handleManualReset = () => {
-    const confirmed = window.confirm("진행 중인 모든 할 일과 오늘의 퀘스트 진행도를 초기화하시겠습니까?");
-    if (confirmed) {
-      // 1. 모든 상태를 순차적으로 확실히 초기화
-      setDailyQuests(INITIAL_DAILY_QUESTS.map(q => ({ ...q })));
-      setMicroTasks([]);
-      setMacroTasks([]);
-      setCurrentQuest(null);
-      
-      // 2. 알림 메시지 표시
-      setCheerNotification("초기화 완료! 새로운 하루를 계획해보세요. 🔄");
-      
-      // 3. 홈 화면으로 강제 이동
-      setActiveTab('home');
-      
-      // 4. 로컬 스토리지 데이터 동기화를 위해 로그 출력
-      console.log("System manually reset by user.");
-    }
+    // 1. 모든 상태를 순차적으로 확실히 초기화 (함수형 업데이트 권장)
+    setDailyQuests(() => INITIAL_DAILY_QUESTS.map(q => ({ ...q })));
+    setMicroTasks([]);
+    setMacroTasks([]);
+    setCurrentQuest(null);
+    
+    // 2. 시각적 피드백
+    setCheerNotification("초기화 완료! 🔄");
+    
+    // 3. 로컬 스토리지 즉시 동기화
+    localStorage.removeItem(STORAGE_KEY);
+    
+    console.log("All tasks and quests manually reset.");
   };
 
   useEffect(() => {
