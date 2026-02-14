@@ -13,7 +13,7 @@
         --color-deep-green-dark: #1E3614;
         --color-dark-brown: #3D2B1F;
         --color-soft-white: #FFFFFF;
-        --color-bg-green: #2D4F1E; /* 배경을 딥 그린으로 고정 */
+        --color-bg-green: #2D4F1E;
       }
       body {
         font-family: 'Nunito', sans-serif;
@@ -43,22 +43,24 @@
         50% { opacity: 0.5; }
       }
       .led-blink { animation: blink 1.5s infinite; }
-      /* 스크롤바 커스텀 */
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.4/client",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
-</head>
+  </head>
   <body>
     <div id="root" class="circuit-bg min-h-screen"></div>
+    <script type="module" src="index.tsx"></script>
   </body>
 </html>

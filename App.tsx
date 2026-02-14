@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import Layout from './components/Layout';
-import { User, MacroTask, MicroTask, TaskStatus, LeagueTier, DailyQuest, Friend, FeedbackEntry, GardenPlant } from './types';
-import { decomposeTask, getAIAdvice } from './services/geminiService';
+import Layout from './components/Layout.tsx';
+import { User, MacroTask, MicroTask, TaskStatus, LeagueTier, DailyQuest, Friend, FeedbackEntry, GardenPlant } from './types.ts';
+import { decomposeTask, getAIAdvice } from './services/geminiService.ts';
 
 // Screens
-import HomeScreen from './screens/HomeScreen';
-import TaskInputScreen from './screens/TaskInputScreen';
-import QuestPlayScreen from './screens/QuestPlayScreen';
-import LeagueScreen from './screens/LeagueScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import FriendsScreen from './screens/FriendsScreen';
-import ShopScreen from './screens/ShopScreen';
+import HomeScreen from './screens/HomeScreen.tsx';
+import TaskInputScreen from './screens/TaskInputScreen.tsx';
+import QuestPlayScreen from './screens/QuestPlayScreen.tsx';
+import LeagueScreen from './screens/LeagueScreen.tsx';
+import ProfileScreen from './screens/ProfileScreen.tsx';
+import FriendsScreen from './screens/FriendsScreen.tsx';
+import ShopScreen from './screens/ShopScreen.tsx';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -69,8 +69,7 @@ const App: React.FC = () => {
     if (completedTask) {
       const gainedXP = completedTask.xpReward;
       
-      // 정원 성장 로직: 일정 확률 또는 일정 완료 횟수마다 식물 추가
-      const shouldGrowPlant = Math.random() > 0.7; // 30% 확률로 정원에 새 생명
+      const shouldGrowPlant = Math.random() > 0.7;
       let newGarden = [...user.garden];
       if (shouldGrowPlant && newGarden.length < 12) {
         const plantTypes = ['🌸', '🌿', '🌳', '🌻', '🌵', '🍀', '🌲'];
