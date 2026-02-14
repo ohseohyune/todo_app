@@ -1,0 +1,5 @@
+{
+  "name": "QuestToDo",
+  "description": "A gamified productivity app inspired by Duolingo that breaks large tasks into bite-sized micro-tasks using AI, featuring streaks, levels, and leagues to keep you motivated.",
+  "requestFramePermissions": []
+}
