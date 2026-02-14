@@ -47,7 +47,6 @@ export interface User {
   totalFocusMinutes: number;
   leagueTier: LeagueTier;
   feedbackHistory: FeedbackEntry[];
-  receivedCheers: number;
   totalCompletedTasks: number;
   inventory: {
     streakFreeze: number;
@@ -58,15 +57,15 @@ export interface User {
   recentAccuracyRatio?: number; 
 }
 
+// Fixed Error: Added missing Friend interface required by FriendsScreen.tsx
 export interface Friend {
   id: string;
   nickname: string;
+  avatar: string;
   level: number;
   streakCount: number;
   currentTaskTitle?: string;
-  avatar: string;
-  lastActive: string;
-  cheeredToday?: boolean;
+  cheeredToday: boolean;
 }
 
 export interface MacroTask {

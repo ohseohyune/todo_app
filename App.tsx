@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './components/Layout.tsx';
-import { User, MacroTask, MicroTask, TaskStatus, LeagueTier, DailyQuest, Friend, FeedbackEntry, GardenPlant, Badge } from './types.ts';
+import { User, MacroTask, MicroTask, TaskStatus, LeagueTier, DailyQuest, FeedbackEntry, GardenPlant, Badge } from './types.ts';
 import { getAIAdvice, decomposeTask } from './services/geminiService.ts';
 
 // Screens
@@ -10,7 +10,6 @@ import TaskInputScreen from './screens/TaskInputScreen.tsx';
 import QuestPlayScreen from './screens/QuestPlayScreen.tsx';
 import LeagueScreen from './screens/LeagueScreen.tsx';
 import ProfileScreen from './screens/ProfileScreen.tsx';
-import FriendsScreen from './screens/FriendsScreen.tsx';
 import ShopScreen from './screens/ShopScreen.tsx';
 
 const STORAGE_KEY = 'quest_todo_data_v6';
@@ -46,7 +45,6 @@ const App: React.FC = () => {
     totalFocusMinutes: 0,
     leagueTier: LeagueTier.BRONZE,
     feedbackHistory: [],
-    receivedCheers: 0,
     totalCompletedTasks: 0,
     inventory: { streakFreeze: 0 },
     garden: [],
@@ -54,19 +52,15 @@ const App: React.FC = () => {
     recentAccuracyRatio: 1.0
   });
 
-  const [friends, setFriends] = useState<Friend[]>([]);
   const [macroTasks, setMacroTasks] = useState<MacroTask[]>([]);
   const [microTasks, setMicroTasks] = useState<MicroTask[]>([]);
   const [dailyQuests, setDailyQuests] = useState<DailyQuest[]>(INITIAL_DAILY_QUESTS);
   const [currentQuest, setCurrentQuest] = useState<MicroTask | null>(null);
 
-  // 일일 리셋 로직
   const checkDailyReset = useCallback((savedUser: User, savedQuests: DailyQuest[]) => {
     const now = new Date();
     const todayStr = now.toDateString();
-    
     if (!savedUser.lastActiveDate) return { updatedUser: savedUser, updatedQuests: savedQuests };
-
     const lastDate = new Date(savedUser.lastActiveDate);
     const lastDateStr = lastDate.toDateString();
 
@@ -84,30 +78,24 @@ const App: React.FC = () => {
     if (lastDateStr !== todayStr && lastDateStr !== yesterdayStr) {
       if (updatedUser.inventory.streakFreeze > 0) {
         updatedUser.inventory.streakFreeze -= 1;
-        setCheerNotification("스트릭 프리즈를 사용하여 연속 기록을 지켰습니다! ❄️");
+        setCheerNotification("스트릭 프리즈 사용! ❄️");
       } else {
         updatedUser.streakCount = 0;
-        setCheerNotification("스트릭이 끊겼습니다. 오늘부터 다시 시작해봐요! 💪");
+        setCheerNotification("다시 시작해봐요! 💪");
       }
     }
-
     return { updatedUser, updatedQuests };
   }, []);
 
   const handleManualReset = () => {
-    // 1. 모든 상태를 순차적으로 확실히 초기화 (함수형 업데이트 권장)
-    setDailyQuests(() => INITIAL_DAILY_QUESTS.map(q => ({ ...q })));
+    // 즉각적인 강제 초기화
+    setDailyQuests(INITIAL_DAILY_QUESTS.map(q => ({ ...q })));
     setMicroTasks([]);
     setMacroTasks([]);
     setCurrentQuest(null);
-    
-    // 2. 시각적 피드백
-    setCheerNotification("초기화 완료! 🔄");
-    
-    // 3. 로컬 스토리지 즉시 동기화
+    setCheerNotification("모든 퀘스트가 초기화되었습니다 🔄");
     localStorage.removeItem(STORAGE_KEY);
-    
-    console.log("All tasks and quests manually reset.");
+    setActiveTab('home');
   };
 
   useEffect(() => {
@@ -117,12 +105,9 @@ const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         let loadedUser = parsed.user || user;
         let loadedQuests = parsed.dailyQuests || dailyQuests;
-
         const { updatedUser, updatedQuests } = checkDailyReset(loadedUser, loadedQuests);
-        
         setUser(updatedUser);
         setDailyQuests(updatedQuests);
-        if (parsed.friends) setFriends(parsed.friends);
         if (parsed.macroTasks) setMacroTasks(parsed.macroTasks);
         if (parsed.microTasks) setMicroTasks(parsed.microTasks);
       } catch (e) {
@@ -135,10 +120,10 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        user, friends, macroTasks, microTasks, dailyQuests
+        user, macroTasks, microTasks, dailyQuests
       }));
     }
-  }, [user, friends, macroTasks, microTasks, dailyQuests, isLoaded]);
+  }, [user, macroTasks, microTasks, dailyQuests, isLoaded]);
 
   useEffect(() => {
     if (activeTab === 'play' && !currentQuest) {
@@ -146,35 +131,10 @@ const App: React.FC = () => {
     }
   }, [activeTab, currentQuest]);
 
-  const checkAchievements = (updatedUser: User) => {
-    const newBadges = [...updatedUser.unlockedBadges];
-    let changed = false;
-    if (!newBadges.includes('first_step') && updatedUser.totalCompletedTasks >= 1) { newBadges.push('first_step'); changed = true; }
-    if (!newBadges.includes('streak_3') && updatedUser.streakCount >= 3) { newBadges.push('streak_3'); changed = true; }
-    if (!newBadges.includes('garden_master') && updatedUser.garden.length >= 5) { newBadges.push('garden_master'); changed = true; }
-    if (changed) {
-      setUser(prev => ({ ...prev, unlockedBadges: newBadges }));
-      setCheerNotification("새로운 업적 달성! 프로필을 확인하세요 🏆");
-    }
-  };
-
   const handleCreateMacroTask = (title: string, category: string, tasks: Partial<MicroTask>[]) => {
     const macroId = Math.random().toString(36).substr(2, 9);
-    const newMacro: MacroTask = {
-      id: macroId,
-      title,
-      category,
-      createdAt: new Date().toISOString(),
-      status: TaskStatus.TODO
-    };
-
-    const newMicros = tasks.map(t => ({
-      ...t,
-      macroTaskId: macroId,
-      category: category,
-      status: TaskStatus.TODO
-    })) as MicroTask[];
-
+    const newMacro: MacroTask = { id: macroId, title, category, createdAt: new Date().toISOString(), status: TaskStatus.TODO };
+    const newMicros = tasks.map(t => ({ ...t, macroTaskId: macroId, category: category, status: TaskStatus.TODO })) as MicroTask[];
     setMacroTasks(prev => [...prev, newMacro]);
     setMicroTasks(prev => [...prev, ...newMicros]);
     setActiveTab('home');
@@ -195,100 +155,30 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleAddFeedback = async (reflection: string) => {
-    const advice = await getAIAdvice(reflection, user);
-    const xpReward = 40; 
-    
-    setUser(prev => {
-      const updated = {
-        ...prev,
-        totalXP: prev.totalXP + xpReward,
-        lastActiveDate: new Date().toISOString(),
-        feedbackHistory: [
-          { 
-            id: Math.random().toString(36).substr(2, 9), 
-            date: new Date().toLocaleDateString(), 
-            userReflection: reflection, 
-            aiAdvice: advice 
-          }, 
-          ...prev.feedbackHistory
-        ]
-      };
-      return updated;
-    });
-
-    updateQuestProgress('q3', 1);
-    updateQuestProgress('q2', xpReward);
-  };
-
   const handleTaskComplete = (microTaskId: string, actualMin: number) => {
     const taskIndex = microTasks.findIndex(t => t.id === microTaskId);
     if (taskIndex === -1) return;
-
     const completedTask = microTasks[taskIndex];
     const gainedXP = completedTask.xpReward;
-
     const updatedMicroTasks = [...microTasks];
-    updatedMicroTasks[taskIndex] = { 
-      ...completedTask, 
-      status: TaskStatus.DONE,
-      actualDurationMin: actualMin 
-    };
+    updatedMicroTasks[taskIndex] = { ...completedTask, status: TaskStatus.DONE, actualDurationMin: actualMin };
     setMicroTasks(updatedMicroTasks);
-
-    const completedOnes = updatedMicroTasks.filter(t => t.status === TaskStatus.DONE && t.actualDurationMin);
-    const last5 = completedOnes.slice(-5);
-    const totalRatio = last5.reduce((acc, t) => acc + (t.actualDurationMin! / t.durationEstMin), 0);
-    const avgRatio = last5.length > 0 ? totalRatio / last5.length : 1.0;
-
     const now = new Date();
     const isNewDay = !user.lastActiveDate || new Date(user.lastActiveDate).toDateString() !== now.toDateString();
-    let newStreak = user.streakCount;
-    if (isNewDay) newStreak += 1;
-
-    const oldLevel = user.level;
+    let newStreak = user.streakCount + (isNewDay ? 1 : 0);
     const newTotalXP = user.totalXP + gainedXP;
     const newLevel = Math.floor(newTotalXP / 1000) + 1;
-    if (newLevel > oldLevel) setLevelUpModal({ level: newLevel });
-
-    let newGarden = [...user.garden];
-    if (Math.random() > 0.3 && newGarden.length < 12) {
-      const plants = ['🌸', '🌿', '🌳', '🌻', '🌵', '🍄', '🍀'];
-      newGarden.push({
-        id: Math.random().toString(),
-        type: plants[Math.floor(Math.random() * plants.length)],
-        category: completedTask.category,
-        position: Math.floor(Math.random() * 12),
-        grownAt: now.toISOString()
-      });
-    }
-
-    const updatedUser = { 
-      ...user, 
-      totalXP: newTotalXP,
-      level: newLevel,
-      totalFocusMinutes: (user.totalFocusMinutes || 0) + actualMin,
-      totalCompletedTasks: user.totalCompletedTasks + 1,
-      streakCount: newStreak,
-      maxStreak: Math.max(user.maxStreak, newStreak),
-      lastActiveDate: now.toISOString(),
-      garden: newGarden,
-      recentAccuracyRatio: avgRatio
-    };
-    
+    if (newLevel > user.level) setLevelUpModal({ level: newLevel });
+    const updatedUser = { ...user, totalXP: newTotalXP, level: newLevel, streakCount: newStreak, lastActiveDate: now.toISOString(), totalCompletedTasks: user.totalCompletedTasks + 1 };
     setUser(updatedUser);
-    checkAchievements(updatedUser);
-
     updateQuestProgress('q1', 1);
     updateQuestProgress('q2', gainedXP);
-
     const nextTask = updatedMicroTasks.find(t => t.status === TaskStatus.TODO);
     setCurrentQuest(nextTask || null);
   };
 
   const handleBuyItem = (itemType: string, cost: number) => {
     if (user.totalXP < cost) return false;
-    
     setUser(prev => {
       const newUser = { ...prev, totalXP: prev.totalXP - cost };
       if (itemType === 'freeze') {
@@ -299,29 +189,41 @@ const App: React.FC = () => {
     return true;
   };
 
+  // Fixed Fix: Implemented handleAddFeedback to connect ProfileScreen with AI advice and update quest state
+  const handleAddFeedback = async (reflection: string) => {
+    const advice = await getAIAdvice(reflection, user);
+    const newEntry: FeedbackEntry = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: new Date().toLocaleDateString(),
+      userReflection: reflection,
+      aiAdvice: advice
+    };
+    setUser(prev => ({
+      ...prev,
+      feedbackHistory: [newEntry, ...prev.feedbackHistory]
+    }));
+    updateQuestProgress('q3', 1);
+  };
+
   return (
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
       {levelUpModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-8 animate-fadeIn">
-          <div className="bg-white rounded-[3rem] p-10 text-center relative overflow-hidden shadow-2xl">
-            <div className="absolute top-0 inset-x-0 h-2 bg-[#A7C957] animate-pulse"></div>
-            <div className="text-7xl mb-6">🎊</div>
-            <h2 className="text-4xl font-black text-[#3D2B1F] mb-2 tracking-tight">LEVEL UP!</h2>
-            <p className="text-[#2D4F1E] font-black text-xl mb-6">축하합니다! 레벨 {levelUpModal.level}이 되었습니다.</p>
-            <button onClick={() => setLevelUpModal(null)} className="w-full bg-[#3D2B1F] text-white py-4 rounded-2xl font-black text-xl shadow-[0_4px_0_#1E3614]">계속해서 몰입하기 🔥</button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-8">
+          <div className="bg-white rounded-[3rem] p-10 text-center shadow-2xl">
+            <h2 className="text-4xl font-black text-[#3D2B1F] mb-6 tracking-tight text-center">LEVEL UP! 🎊</h2>
+            <p className="text-[#2D4F1E] font-black text-xl mb-6">레벨 {levelUpModal.level} 달성!</p>
+            <button onClick={() => setLevelUpModal(null)} className="w-full bg-[#3D2B1F] text-white py-4 rounded-2xl font-black">계속하기</button>
           </div>
         </div>
       )}
-
       {(() => {
         switch (activeTab) {
           case 'home': return <HomeScreen user={user} microTasks={microTasks} dailyQuests={dailyQuests} onStartQuest={handleStartQuest} onMoveTask={()=>{}} cheerNotification={cheerNotification} onClearNotification={() => setCheerNotification(null)} onGoToTab={setActiveTab} onResetQuests={handleManualReset} />;
           case 'input': return <TaskInputScreen onCreate={handleCreateMacroTask} user={user} />;
           case 'play': return currentQuest ? <QuestPlayScreen quest={currentQuest} onComplete={(min) => handleTaskComplete(currentQuest.id, min)} onTooHard={() => {}} /> : null;
-          case 'friends': return <FriendsScreen friends={friends} onAddFriend={()=>{}} onCheerFriend={()=>{}} />;
-          case 'shop': return <ShopScreen user={user} onBuyItem={handleBuyItem} />;
           case 'league': return <LeagueScreen user={user} />;
           case 'profile': return <ProfileScreen user={user} onUpdateProfile={(n, a) => setUser(prev => ({ ...prev, nickname: n, avatar: a }))} onAddFeedback={handleAddFeedback} />;
+          case 'shop': return <ShopScreen user={user} onBuyItem={handleBuyItem} />;
           default: return null;
         }
       })()}
