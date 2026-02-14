@@ -1,10 +1,21 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { MicroTask, TaskStatus } from "../types";
+import { MicroTask, TaskStatus } from "../types.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// AI 인스턴스를 전역에서 생성하지 않고, 함수가 호출될 때 생성합니다.
+// 이는 API 키가 로드되지 않은 상태에서 앱이 크래시되는 것을 방지합니다.
 
 export const decomposeTask = async (title: string, category: string): Promise<Partial<MicroTask>[]> => {
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    console.error("API_KEY가 설정되지 않았습니다. Vercel 설정에서 API_KEY 환경 변수를 확인하세요.");
+    alert("AI 설정(API 키)이 완료되지 않았습니다. 관리자 설정을 확인해 주세요.");
+    return [];
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   const prompt = `당신은 ADHD 성향이 있거나 집중이 어려운 사람들을 돕는 생산성 전문가입니다.
   다음의 큰 목표를 5~15분 내에 완료할 수 있는 아주 구체적이고 작은 '마이크로 퀘스트' 3~6개로 분해해주세요.
   
@@ -55,6 +66,14 @@ export const decomposeTask = async (title: string, category: string): Promise<Pa
 };
 
 export const getAIAdvice = async (reflection: string, stats: any): Promise<string> => {
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    return "API 키가 설정되지 않아 조언을 생성할 수 없습니다.";
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   const prompt = `당신은 사용자의 하루 성찰을 듣고 더 나은 방향을 제시해주는 생산성 비서 로봇입니다. 
   사용자의 오늘 하루 회고: "${reflection}"
   오늘의 통계: 레벨 ${stats.level}, 스트릭 ${stats.streakCount}일, 전체 XP ${stats.totalXP}
