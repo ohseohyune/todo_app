@@ -1,68 +1,165 @@
 
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User, MicroTask, TaskStatus } from '../types';
+import { decomposeTask } from '../services/geminiService';
 
 interface TaskInputScreenProps {
-  onCreate: (title: string, category: string) => Promise<boolean>;
+  onCreate: (title: string, category: string, tasks: Partial<MicroTask>[]) => void;
   user: User;
 }
 
+type ScreenState = 'input' | 'generating' | 'refining';
+
 const TaskInputScreen: React.FC<TaskInputScreenProps> = ({ onCreate, user }) => {
+  const [state, setState] = useState<ScreenState>('input');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('일반');
   const [categories, setCategories] = useState(['업무', '공부', '집안일', '건강', '일반']);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  
+  const [generatedTasks, setGeneratedTasks] = useState<Partial<MicroTask>[]>([]);
+  const [refinementInput, setRefinementInput] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     
-    setIsGenerating(true);
-    const success = await onCreate(title, category);
-    // 실패한 경우 로딩 상태를 해제하여 다시 시도할 수 있게 함
-    if (!success) {
-      setIsGenerating(false);
+    setState('generating');
+    const tasks = await decomposeTask(title, category, { level: user.level, streak: user.streakCount });
+    
+    if (tasks && tasks.length > 0) {
+      setGeneratedTasks(tasks);
+      setState('refining');
+    } else {
+      alert("AI 분해에 실패했습니다. 다시 시도해주세요.");
+      setState('input');
     }
   };
 
-  const handleAddCategory = () => {
-    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
-      const trimmed = newCategoryName.trim();
-      setCategories([...categories, trimmed]);
-      setCategory(trimmed);
-      setNewCategoryName('');
-      setShowAddCategory(false);
+  const handleRefine = async (feedback: string) => {
+    setState('generating');
+    const tasks = await decomposeTask(
+      title, 
+      category, 
+      { level: user.level, streak: user.streakCount },
+      feedback,
+      generatedTasks
+    );
+    
+    if (tasks && tasks.length > 0) {
+      setGeneratedTasks(tasks);
+      setState('refining');
+      setRefinementInput('');
+    } else {
+      alert("재분해에 실패했습니다.");
+      setState('refining');
     }
   };
 
-  if (isGenerating) {
+  const handleFinalize = () => {
+    onCreate(title, category, generatedTasks);
+  };
+
+  if (state === 'generating') {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-pulse">
-        <div className="text-6xl mb-6">🪄</div>
-        <h2 className="text-2xl font-black text-white">마이크로 퀘스트 생성 중...</h2>
-        <div className="mt-4 bg-[#1E3614] p-4 rounded-2xl border border-white/10">
-          <p className="text-green-400 text-xs font-black uppercase tracking-widest mb-1">Adaptive Difficulty Active</p>
-          <p className="text-white/80 leading-relaxed font-bold text-sm">
-            레벨 {user.level} 숙련도와 {user.streakCount}일 스트릭을 분석하여<br/>당신에게 딱 맞는 시간을 계산하고 있습니다.
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="text-6xl mb-6 animate-bounce">🪄</div>
+        <h2 className="text-2xl font-black text-white">마이크로 퀘스트 설계 중...</h2>
+        <div className="mt-6 bg-white/10 p-5 rounded-[2rem] border border-white/20 max-w-xs">
+          <p className="text-green-400 text-[10px] font-black uppercase tracking-widest mb-2">Cognitive Load Minimizer</p>
+          <p className="text-white/80 text-sm font-bold leading-relaxed">
+            사용자의 레벨과 상태를 분석하여<br/>가장 시작하기 쉬운 첫 단계를 찾고 있습니다.
           </p>
         </div>
-        <div className="mt-10 flex gap-2">
-          <div className="w-3 h-3 bg-white/40 rounded-full animate-bounce"></div>
-          <div className="w-3 h-3 bg-white/60 rounded-full animate-bounce delay-75"></div>
-          <div className="w-3 h-3 bg-white/80 rounded-full animate-bounce delay-150"></div>
+      </div>
+    );
+  }
+
+  if (state === 'refining') {
+    return (
+      <div className="flex flex-col h-full gap-4 pb-4 animate-fadeIn">
+        <div className="flex justify-between items-end mb-2">
+          <div>
+            <h2 className="text-2xl font-black text-white leading-tight">설계된 퀘스트</h2>
+            <p className="text-white/60 text-xs font-bold mt-1">이대로 시작할까요, 아니면 더 다듬을까요?</p>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] font-black text-white/40 uppercase">Total Steps</span>
+            <p className="text-white font-black">{generatedTasks.length}</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1 scroll-container">
+          {generatedTasks.map((task, idx) => (
+            <div key={task.id || idx} className="bg-white p-4 rounded-3xl shadow-lg border-2 border-[#1E3614] relative group">
+              <div className="absolute -left-2 -top-2 w-6 h-6 bg-[#2D4F1E] text-white rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white">
+                {idx + 1}
+              </div>
+              <div className="flex justify-between items-start">
+                <h4 className="font-black text-[#3D2B1F] text-sm leading-tight pr-4">{task.title}</h4>
+                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                  {task.durationEstMin}분
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400 font-bold mt-2 leading-tight">🎯 {task.successCriteria}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-3 bg-[#3D2B1F] p-5 rounded-[2.5rem] border-2 border-[#1E3614] shadow-2xl">
+          <div className="flex gap-2">
+            <input 
+              type="text"
+              value={refinementInput}
+              onChange={(e) => setRefinementInput(e.target.value)}
+              placeholder="예: 더 잘게 나눠줘, 첫 단계가 너무 어려워"
+              className="flex-1 bg-white/10 p-3 rounded-2xl text-white text-xs font-bold outline-none border border-white/10 focus:border-white/40"
+            />
+            <button 
+              onClick={() => handleRefine(refinementInput || "더 자세하게 나눠줘")}
+              className="bg-white/10 text-white px-4 rounded-2xl font-black text-xs hover:bg-white/20 transition-all"
+            >
+              수정 요청
+            </button>
+          </div>
+          
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {['더 쉽게', '더 잘게', '3단계만 더'].map(btn => (
+              <button 
+                key={btn}
+                onClick={() => handleRefine(btn)}
+                className="whitespace-nowrap px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-white/60 hover:text-white transition-all"
+              >
+                {btn}
+              </button>
+            ))}
+          </div>
+
+          <button 
+            onClick={handleFinalize}
+            className="w-full bg-[#A7C957] text-[#1E3614] py-4 rounded-2xl font-black text-xl shadow-[0_4px_0_#6A994E] active:translate-y-1 active:shadow-none transition-all"
+          >
+            이대로 시작하기 🚀
+          </button>
+          
+          <button 
+            onClick={() => setState('input')}
+            className="w-full text-white/40 font-bold text-xs"
+          >
+            처음부터 다시 작성
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto py-6 flex flex-col h-full">
+    <div className="max-w-md mx-auto py-6 flex flex-col h-full animate-fadeIn">
       <h2 className="text-3xl font-black text-white mb-2 tracking-tight">새로운 퀘스트</h2>
       <p className="text-white/60 mb-8 font-bold">오늘 우리가 정복할 목표는 무엇인가요?</p>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-8 flex-1">
+      <form onSubmit={handleInitialSubmit} className="flex flex-col gap-8 flex-1">
         <div className="space-y-4">
           <label className="block">
             <span className="text-sm font-black text-white/40 uppercase tracking-widest ml-1">달성하고 싶은 목표</span>
@@ -131,11 +228,21 @@ const TaskInputScreen: React.FC<TaskInputScreenProps> = ({ onCreate, user }) => 
           type="submit"
           className="mt-auto bg-[#2D4F1E] text-white py-4 rounded-2xl font-black text-xl shadow-[0_4px_0_#1E3614] border-2 border-white/20 active:translate-y-1 active:shadow-none transition-all uppercase tracking-widest"
         >
-          AI로 분해하기 ✨
+          AI 설계 시작 ✨
         </button>
       </form>
     </div>
   );
+
+  function handleAddCategory() {
+    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
+      const trimmed = newCategoryName.trim();
+      setCategories([...categories, trimmed]);
+      setCategory(trimmed);
+      setNewCategoryName('');
+      setShowAddCategory(false);
+    }
+  }
 };
 
 export default TaskInputScreen;

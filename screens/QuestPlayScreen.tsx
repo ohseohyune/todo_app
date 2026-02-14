@@ -30,7 +30,6 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
   }, [isActive, timeLeft]);
 
   const handleComplete = () => {
-    // 진동 피드백 (모바일 지원)
     if ('vibrate' in navigator) {
       navigator.vibrate([100, 30, 100]);
     }
@@ -40,7 +39,7 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
   };
 
   return (
-    <div className={`flex flex-col h-full text-center py-4 transition-colors duration-1000 ${isActive ? 'bg-[#1E3614]' : ''}`}>
+    <div className={`flex flex-col min-h-full text-center py-4 transition-colors duration-1000 ${isActive ? 'bg-[#1E3614]' : ''}`}>
       <div className="mb-6 text-left px-4">
         <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20 text-white/60">
           Focus Mode
@@ -50,7 +49,7 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
         </h2>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center items-center gap-6 relative">
+      <div className="flex-1 flex flex-col justify-center items-center gap-6 relative py-4">
         {showConfetti && (
           <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
             {[...Array(30)].map((_, i) => (
@@ -61,7 +60,7 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
           </div>
         )}
 
-        <div className={`relative w-64 h-64 flex items-center justify-center rounded-[4rem] border-4 border-[#1E3614] shadow-2xl transition-all duration-1000 ${isActive ? 'bg-white scale-105' : 'bg-white/90'}`}>
+        <div className={`relative flex-shrink-0 w-64 h-64 flex items-center justify-center rounded-[4rem] border-4 border-[#1E3614] shadow-2xl transition-all duration-1000 ${isActive ? 'bg-white scale-105' : 'bg-white/90'}`}>
           <div className="z-10 text-center">
             <span className="text-6xl font-black text-[#3D2B1F] mono tracking-tighter">
               {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
@@ -81,7 +80,7 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
         </div>
       </div>
 
-      <div className="mt-8 flex flex-col gap-3">
+      <div className="mt-8 mb-6 flex flex-col gap-3 px-2">
         <button onClick={() => setIsActive(!isActive)} className={`py-4 rounded-2xl font-black text-lg transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]'}`}>
           {isActive ? '잠시 멈춤' : '몰입 시작 🚀'}
         </button>

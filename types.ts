@@ -38,12 +38,14 @@ export interface GardenPlant {
 export interface User {
   id: string;
   nickname: string;
-  avatar: string;
+  avatar: string; // Emoji or Image URL
   streakCount: number;
   maxStreak: number;
   lastActiveDate: string | null;
   level: number;
   totalXP: number;
+  totalFocusMinutes: number; // 새 필드: 총 집중 시간
+  // Added leagueTier to match usage in App.tsx and LeagueScreen.tsx
   leagueTier: LeagueTier;
   feedbackHistory: FeedbackEntry[];
   receivedCheers: number;
@@ -52,7 +54,7 @@ export interface User {
     streakFreeze: number;
   };
   garden: GardenPlant[];
-  unlockedBadges: string[]; // 뱃지 ID 리스트
+  unlockedBadges: string[];
 }
 
 export interface Friend {
