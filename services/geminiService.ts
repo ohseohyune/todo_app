@@ -2,15 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { MicroTask, TaskStatus } from "../types.ts";
 
-// AI 인스턴스를 전역에서 생성하지 않고, 함수가 호출될 때 생성합니다.
-// 이는 API 키가 로드되지 않은 상태에서 앱이 크래시되는 것을 방지합니다.
-
 export const decomposeTask = async (title: string, category: string): Promise<Partial<MicroTask>[]> => {
+  // vite.config.ts의 define을 통해 주입된 값을 읽어옵니다.
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey) {
-    console.error("API_KEY가 설정되지 않았습니다. Vercel 설정에서 API_KEY 환경 변수를 확인하세요.");
-    alert("AI 설정(API 키)이 완료되지 않았습니다. 관리자 설정을 확인해 주세요.");
+  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+    console.error("API_KEY가 감지되지 않았습니다. Vercel Project Settings -> Environment Variables에서 'API_KEY'가 등록되어 있는지 확인하세요.");
+    alert("AI 설정(API 키)이 앱에 적용되지 않았습니다.\n\n[해결 방법]\n1. Vercel에서 'API_KEY' 등록 확인\n2. 등록 후 반드시 'Deployments' 탭에서 'Redeploy' 클릭!");
     return [];
   }
 
@@ -68,7 +66,7 @@ export const decomposeTask = async (title: string, category: string): Promise<Pa
 export const getAIAdvice = async (reflection: string, stats: any): Promise<string> => {
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey) {
+  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
     return "API 키가 설정되지 않아 조언을 생성할 수 없습니다.";
   }
 
