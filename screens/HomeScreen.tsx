@@ -11,9 +11,10 @@ interface HomeScreenProps {
   cheerNotification?: string | null;
   onClearNotification?: () => void;
   onGoToTab?: (tab: string) => void;
+  onResetQuests?: () => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, onStartQuest, onMoveTask, cheerNotification, onClearNotification, onGoToTab }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, onStartQuest, onMoveTask, cheerNotification, onClearNotification, onGoToTab, onResetQuests }) => {
   const reflectionQuest = dailyQuests.find(q => q.id === 'q3');
   const isReflectionDone = reflectionQuest?.completed;
 
@@ -22,7 +23,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, 
       {cheerNotification && (
         <div className="bg-[#3D2B1F] p-4 rounded-3xl border-2 border-[#A7C957] shadow-lg flex items-center justify-between animate-bounce-short">
           <p className="text-xs font-black text-white">{cheerNotification}</p>
-          <button onClick={onClearNotification} className="text-white/40 text-xl">×</button>
+          <button onClick={onClearNotification} className="text-white/40 text-xl px-2">×</button>
         </div>
       )}
 
@@ -47,13 +48,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, 
         </div>
       </div>
 
-      {/* 데일리 퀘스트 섹션 */}
-      <section className="bg-white/10 p-5 rounded-[2.5rem] border-2 border-white/10">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-widest">Daily Quests</h3>
-          <span className="text-[9px] font-black text-white/40">{dailyQuests.filter(q => q.completed).length} / {dailyQuests.length} 완료</span>
+      {/* 데일리 퀘스트 섹션 (리셋 버튼 포함) */}
+      <section className="bg-white/10 p-5 rounded-[2.5rem] border-2 border-white/10 relative overflow-hidden">
+        <div className="flex justify-between items-center mb-4 relative z-50">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">Daily Quests</h3>
+          </div>
+          <button 
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onResetQuests) onResetQuests();
+            }}
+            className="text-[10px] font-black text-[#3D2B1F] bg-[#A7C957] border-2 border-[#1E3614] px-4 py-2 rounded-full shadow-[0_4px_0_#1E3614] hover:bg-[#B7D967] active:translate-y-1 active:shadow-none transition-all pointer-events-auto cursor-pointer z-[100]"
+          >
+            🔄 퀘스트 리셋
+          </button>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-3 relative z-10">
           {dailyQuests.map(q => (
             <div key={q.id} className={`flex items-center gap-3 p-3 rounded-2xl ${q.completed ? 'bg-green-500/20' : 'bg-white/5'}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${q.completed ? 'bg-green-500 text-white' : 'bg-white/10 text-white/40'}`}>

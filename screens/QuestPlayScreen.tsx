@@ -14,7 +14,6 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
   const [showConfetti, setShowConfetti] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   
-  // 실제 소요 시간 측정을 위한 변수
   const startTimeRef = useRef<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -46,16 +45,20 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
   };
 
   const handleComplete = () => {
+    if (isFinishing) return;
+    
     if ('vibrate' in navigator) {
       navigator.vibrate([100, 30, 100]);
     }
     setIsFinishing(true);
     setShowConfetti(true);
     
-    // 분 단위로 계산 (최소 1분 보장)
-    const actualMin = Math.max(1, Math.round(elapsedSeconds / 60));
+    // 분 단위로 계산 (최소 1분 보장, 타이머 안 켰으면 1분으로 처리)
+    const actualMin = Math.max(1, Math.round(elapsedSeconds / 60) || 1);
     
-    setTimeout(() => onComplete(actualMin), 2000);
+    setTimeout(() => {
+      onComplete(actualMin);
+    }, 1500);
   };
 
   return (
@@ -104,10 +107,18 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
       </div>
 
       <div className="mt-8 mb-6 flex flex-col gap-3 px-2">
-        <button onClick={handleStart} className={`py-4 rounded-2xl font-black text-lg transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]'}`}>
+        <button 
+          onClick={handleStart} 
+          disabled={isFinishing}
+          className={`py-4 rounded-2xl font-black text-lg transition-all ${isFinishing ? 'opacity-0' : (isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]')}`}
+        >
           {isActive ? '잠시 멈춤' : '몰입 시작 🚀'}
         </button>
-        <button onClick={handleComplete} disabled={isFinishing || elapsedSeconds < 5} className={`py-4 rounded-2xl font-black text-xl shadow-xl transition-all ${isFinishing ? 'bg-green-500 text-white' : 'bg-white text-[#2D4F1E] active:translate-y-1'}`}>
+        <button 
+          onClick={handleComplete} 
+          disabled={isFinishing} 
+          className={`py-4 rounded-2xl font-black text-xl shadow-xl transition-all ${isFinishing ? 'bg-green-500 text-white scale-105' : 'bg-white text-[#2D4F1E] active:translate-y-1'}`}
+        >
           {isFinishing ? '참 잘했어요! ✨' : '완료했습니다!'}
         </button>
       </div>
