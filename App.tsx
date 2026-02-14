@@ -178,7 +178,19 @@ const App: React.FC = () => {
     return false;
   };
 
-  const handleCreateMacroTask = async (title: string, category: string) => {
+  const handleCreateMacroTask = async (title: string, category: string): Promise<boolean> => {
+    // 사용자의 레벨과 스트릭 정보를 넘겨서 시간을 더 스마트하게 계산하게 합니다.
+    const micros = await decomposeTask(title, category, { 
+      level: user.level, 
+      streak: user.streakCount 
+    });
+
+    if (micros.length === 0) {
+      // AI 분해에 실패했을 때 처리
+      alert("현재 AI가 너무 바쁘네요! 😭 (할당량 초과)\n잠시 후(약 1분 뒤) 다시 시도해 주세요.");
+      return false; // 실패 반환
+    }
+
     const newMacro: MacroTask = {
       id: Math.random().toString(36).substr(2, 9),
       title,
@@ -187,12 +199,6 @@ const App: React.FC = () => {
       status: TaskStatus.TODO
     };
     setMacroTasks(prev => [...prev, newMacro]);
-
-    // 사용자의 레벨과 스트릭 정보를 넘겨서 시간을 더 스마트하게 계산하게 합니다.
-    const micros = await decomposeTask(title, category, { 
-      level: user.level, 
-      streak: user.streakCount 
-    });
     
     const fullMicros = micros.map(m => ({ 
       ...m, 
@@ -208,6 +214,7 @@ const App: React.FC = () => {
     } else {
       setActiveTab('home');
     }
+    return true; // 성공 반환
   };
 
   const handleUpdateProfile = (nickname: string, avatar: string) => {

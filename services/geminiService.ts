@@ -36,7 +36,7 @@ export const decomposeTask = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview', // 모델을 Flash로 변경하여 할당량 및 속도 개선
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -59,7 +59,10 @@ export const decomposeTask = async (
       }
     });
 
-    const data = JSON.parse(response.text || '[]');
+    const text = response.text;
+    if (!text) throw new Error("AI 응답이 비어있습니다.");
+
+    const data = JSON.parse(text);
     return data.map((item: any, index: number) => ({
       ...item,
       id: Math.random().toString(36).substr(2, 9),
@@ -68,6 +71,7 @@ export const decomposeTask = async (
     }));
   } catch (error) {
     console.error("분해 실패:", error);
+    // 에러 발생 시 명확하게 null 또는 특정 에러 객체를 반환하거나 빈 배열을 반환
     return [];
   }
 };
@@ -81,7 +85,7 @@ export const getAIAdvice = async (reflection: string, stats: any): Promise<strin
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview', // 통일성을 위해 Flash 모델 사용
       contents: prompt,
     });
     return response.text || "오늘도 수고하셨습니다.";

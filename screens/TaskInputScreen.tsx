@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { User } from '../types';
 
 interface TaskInputScreenProps {
-  onCreate: (title: string, category: string) => void;
+  onCreate: (title: string, category: string) => Promise<boolean>;
   user: User;
 }
 
@@ -20,8 +20,11 @@ const TaskInputScreen: React.FC<TaskInputScreenProps> = ({ onCreate, user }) => 
     if (!title.trim()) return;
     
     setIsGenerating(true);
-    await onCreate(title, category);
-    setIsGenerating(false);
+    const success = await onCreate(title, category);
+    // 실패한 경우 로딩 상태를 해제하여 다시 시도할 수 있게 함
+    if (!success) {
+      setIsGenerating(false);
+    }
   };
 
   const handleAddCategory = () => {
