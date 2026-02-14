@@ -7,14 +7,20 @@ interface LeagueScreenProps {
 }
 
 const LeagueScreen: React.FC<LeagueScreenProps> = ({ user }) => {
-  const dummyRankings = [
-    { name: '태스크히어로', xp: 3200, avatar: '🥷' },
-    { name: '듀오마스터', xp: 2950, avatar: '🦉' },
-    { name: '열공맨', xp: 2800, avatar: '👑' },
-    { name: `${user.nickname} (나)`, xp: user.totalXP, avatar: '⚡', isUser: true },
-    { name: '꾸준함이답', xp: 2100, avatar: '🐢' },
-    { name: '할일봇', xp: 1800, avatar: '🤖' },
-    { name: '얼리버드', xp: 1500, avatar: '🐦' },
+  // 실제 유저 XP를 포함하여 순위를 다시 계산합니다.
+  // Added isUser: false to each base ranking item to satisfy TypeScript's type checking when merged with user data
+  const baseRankings = [
+    { name: '태스크히어로', xp: 3200, avatar: '🥷', isUser: false },
+    { name: '듀오마스터', xp: 2950, avatar: '🦉', isUser: false },
+    { name: '열공맨', xp: 2800, avatar: '👑', isUser: false },
+    { name: '꾸준함이답', xp: 2100, avatar: '🐢', isUser: false },
+    { name: '할일봇', xp: 1800, avatar: '🤖', isUser: false },
+    { name: '얼리버드', xp: 1500, avatar: '🐦', isUser: false },
+  ];
+
+  const rankings = [
+    ...baseRankings,
+    { name: `${user.nickname} (나)`, xp: user.totalXP, avatar: user.avatar, isUser: true }
   ].sort((a, b) => b.xp - a.xp);
 
   const getTierName = (tier: LeagueTier) => {
@@ -54,7 +60,7 @@ const LeagueScreen: React.FC<LeagueScreenProps> = ({ user }) => {
           <span className="w-20 text-right">주간 XP</span>
         </div>
         <div className="flex flex-col">
-          {dummyRankings.map((player, idx) => (
+          {rankings.map((player, idx) => (
             <div 
               key={player.name} 
               className={`flex items-center p-4 border-b border-gray-50 last:border-0 ${player.isUser ? 'bg-[#2D4F1E11]' : ''}`}
@@ -74,13 +80,6 @@ const LeagueScreen: React.FC<LeagueScreenProps> = ({ user }) => {
             </div>
           ))}
         </div>
-      </div>
-      
-      <div className="bg-[#3D2B1F] p-4 rounded-2xl border-2 border-[#1E3614] flex items-center gap-3">
-        <span className="text-2xl">⚡</span>
-        <p className="text-xs text-white/80 font-bold leading-relaxed">
-          현재 <span className="text-white font-black">승급권</span>에 있습니다! 조금만 더 힘내서 다이아몬드 리그로 올라가세요.
-        </p>
       </div>
     </div>
   );

@@ -19,6 +19,9 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
     }
   };
 
+  // 친구들의 총 레벨 합계를 영향력으로 계산 (동적 수치)
+  const totalCohortImpact = friends.reduce((acc, f) => acc + f.level + f.streakCount, 0);
+
   return (
     <div className="flex flex-col gap-6 animate-fadeIn h-full">
       {/* 1. 친구 추가 섹션 */}
@@ -54,7 +57,6 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
           {friends.length > 0 ? (
             friends.map((friend) => (
               <div key={friend.id} className="bg-white p-4 rounded-3xl border-2 border-white/10 shadow-sm flex items-center gap-4 group hover:border-[#2D4F1E] transition-all">
-                {/* 친구 아바타 및 레벨 */}
                 <div className="relative">
                   <div className="w-12 h-12 bg-[#F4F2F0] rounded-2xl flex items-center justify-center text-2xl border-2 border-white group-hover:bg-[#2D4F1E11] transition-colors">
                     {friend.avatar}
@@ -64,7 +66,6 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
                   </div>
                 </div>
 
-                {/* 친구 정보 */}
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <h4 className="font-black text-[#3D2B1F] text-sm">{friend.nickname}</h4>
@@ -73,7 +74,6 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
                     </span>
                   </div>
                   
-                  {/* 친구의 현재 상태 */}
                   <div className="mt-1 flex flex-col">
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full led-blink"></div>
@@ -87,7 +87,6 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
                   </div>
                 </div>
 
-                {/* 응원 버튼 (Nudge) */}
                 <button 
                   onClick={() => onCheerFriend(friend.id)}
                   disabled={friend.cheeredToday}
@@ -115,7 +114,7 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ friends, onAddFriend, onC
       <div className="bg-[#3D2B1F] p-4 rounded-2xl border-2 border-[#1E3614] flex items-center justify-between shadow-xl">
         <div className="flex flex-col">
           <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Cohort Impact</span>
-          <p className="text-xs text-white font-bold">내 코호트는 오늘 총 <span className="text-green-400">12개</span>의 퀘스트를 달성했습니다!</p>
+          <p className="text-xs text-white font-bold">내 코호트는 오늘 총 <span className="text-green-400">{totalCohortImpact}</span>의 가중치를 달성했습니다!</p>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-xs font-black text-[#A7C957]">Live</span>

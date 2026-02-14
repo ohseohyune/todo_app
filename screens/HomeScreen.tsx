@@ -40,7 +40,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   const gardenGrid = Array(12).fill(null);
   user.garden.forEach(plant => {
     if (plant.position < 12) {
-      gardenGrid[plant.position] = plant.type;
+      gardenGrid[plant.position] = plant;
     }
   });
 
@@ -59,7 +59,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       )}
 
-      {/* 1. 상단 캐릭터 섹션 (Mindful Message) */}
+      {/* 1. 상단 캐릭터 섹션 */}
       <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-2 border-[#1E3614] relative overflow-hidden">
         <div className="flex items-start gap-4 mb-4">
           <div className="flex flex-col items-center">
@@ -95,25 +95,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </div>
 
-      {/* 마음의 정원 섹션 (NEW) */}
+      {/* 마음의 정원 섹션 */}
       <section className="bg-white/10 p-5 rounded-[2.5rem] border-2 border-white/10 overflow-hidden">
         <div className="flex justify-between items-center mb-4 px-2">
           <h3 className="text-sm font-black text-white uppercase tracking-widest">마음의 정원</h3>
-          <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest italic">{user.garden.length}/12 Plants</span>
+          <div className="flex gap-1">
+            <span className="text-[8px] font-bold text-white/60">🌳업무</span>
+            <span className="text-[8px] font-bold text-white/60">🌸공부</span>
+            <span className="text-[8px] font-bold text-white/60">🌵건강</span>
+          </div>
         </div>
         <div className="grid grid-cols-4 gap-3 bg-[#1E361444] p-4 rounded-3xl border border-white/5 shadow-inner">
-          {gardenGrid.map((plant, i) => (
-            <div key={i} className="aspect-square bg-[#F4F2F008] rounded-2xl border border-white/5 flex items-center justify-center text-2xl transition-all hover:scale-110">
-              {plant || <span className="text-[10px] opacity-10">🕳️</span>}
+          {gardenGrid.map((item, i) => (
+            <div key={i} className="aspect-square bg-[#F4F2F008] rounded-2xl border border-white/5 flex flex-col items-center justify-center relative group transition-all hover:bg-white/10">
+              {item ? (
+                <>
+                  <span className="text-2xl transition-transform group-hover:scale-125 z-10">{item.type}</span>
+                  <div className="absolute -bottom-1 text-[6px] font-black text-white/30 uppercase tracking-tighter hidden group-hover:block">
+                    {item.category}
+                  </div>
+                </>
+              ) : (
+                <span className="text-[10px] opacity-10">🕳️</span>
+              )}
             </div>
           ))}
         </div>
         <p className="text-[10px] text-center text-white/30 font-bold mt-4 uppercase tracking-widest">
-          퀘스트를 완료해 정원을 풍성하게 가꾸세요
+          카테고리별 활동이 각기 다른 생명을 피워냅니다
         </p>
       </section>
 
-      {/* 2. CONTROL OBJECTIVES (Daily Quests) */}
+      {/* 2. CONTROL OBJECTIVES */}
       <section>
         <div className="flex justify-between items-center mb-3 ml-2">
           <h3 className="text-lg font-black text-white uppercase tracking-tight">Today's Presence</h3>
@@ -160,9 +173,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
                   }`}>
                     {task.status === TaskStatus.DONE ? '✓' : task.orderIndex + 1}
                   </div>
-                  <span className={`text-xs font-bold ${task.status === TaskStatus.DONE ? 'text-white/60 line-through' : 'text-[#3D2B1F]'}`}>
-                    {task.title}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className={`text-xs font-bold ${task.status === TaskStatus.DONE ? 'text-white/60 line-through' : 'text-[#3D2B1F]'}`}>
+                      {task.title}
+                    </span>
+                    {task.category && task.status !== TaskStatus.DONE && (
+                      <span className="text-[8px] font-black text-[#2D4F1E] opacity-40 uppercase tracking-tighter">
+                        {task.category}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { User, FeedbackEntry } from '../types';
+import React, { useState, useRef } from 'react';
+import { User, MacroTask, MicroTask, DailyQuest, Friend } from '../types';
 
 interface ProfileScreenProps {
   user: User;
@@ -15,12 +15,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onUpdateProfile, on
   
   const [reflection, setReflection] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stats = [
-    { label: '완료한 스텝 ✅', value: '42', color: 'text-[#2D4F1E]' },
-    { label: '최장 연속 가동 🔥', value: `${user.streakCount}일`, color: 'text-[#2D4F1E]' },
-    { label: '받은 에너지 🙌', value: `${user.receivedCheers}`, color: 'text-[#3D2B1F]' },
-    { label: '저장된 에너지 🔋', value: user.totalXP.toLocaleString(), color: 'text-[#3D2B1F]' },
+    { label: '완료한 퀘스트 ✅', value: user.totalCompletedTasks.toString(), color: 'text-[#2D4F1E]' },
+    { label: '현재 스트릭 🔥', value: `${user.streakCount}일`, color: 'text-[#2D4F1E]' },
+    { label: '최고 스트릭 🏆', value: `${user.maxStreak || user.streakCount}일`, color: 'text-[#3D2B1F]' },
+    { label: '누적 에너지 🔋', value: user.totalXP.toLocaleString(), color: 'text-[#3D2B1F]' },
   ];
 
   const handleSaveProfile = () => {
@@ -34,6 +35,49 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onUpdateProfile, on
     await onAddFeedback(reflection);
     setReflection('');
     setIsSubmittingFeedback(false);
+  };
+
+  const handleResetData = () => {
+    if (window.confirm("정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
+
+  // 데이터 백업 (파일 다운로드)
+  const handleExportData = () => {
+    const data = localStorage.getItem('quest_todo_data_v2');
+    if (!data) {
+      alert("백업할 데이터가 없습니다.");
+      return;
+    }
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `quest_todo_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 데이터 복구 (파일 업로드)
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        JSON.parse(content); // 유효한 JSON인지 검증
+        localStorage.setItem('quest_todo_data_v2', content);
+        alert("데이터 복구가 완료되었습니다. 앱을 재시작합니다.");
+        window.location.reload();
+      } catch (err) {
+        alert("유효하지 않은 백업 파일입니다.");
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -62,18 +106,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onUpdateProfile, on
               />
             </div>
             <div className="flex gap-2 mt-2">
-              <button 
-                onClick={() => setIsEditing(false)}
-                className="flex-1 py-2 rounded-xl font-bold text-gray-400"
-              >
-                취소
-              </button>
-              <button 
-                onClick={handleSaveProfile}
-                className="flex-1 py-2 bg-[#2D4F1E] text-white rounded-xl font-black"
-              >
-                저장
-              </button>
+              <button onClick={() => setIsEditing(false)} className="flex-1 py-2 rounded-xl font-bold text-gray-400">취소</button>
+              <button onClick={handleSaveProfile} className="flex-1 py-2 bg-[#2D4F1E] text-white rounded-xl font-black">저장</button>
             </div>
           </div>
         ) : (
@@ -101,7 +135,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onUpdateProfile, on
       {/* 통계 섹션 */}
       <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-white p-5 rounded-3xl border-2 border-white/10 flex flex-col group hover:border-[#2D4F1E] transition-all active:scale-95 shadow-lg">
+          <div key={stat.label} className="bg-white p-5 rounded-3xl border-2 border-white/10 flex flex-col active:scale-95 shadow-lg">
             <span className={`text-2xl font-black ${stat.color} mb-1 tracking-tighter`}>{stat.value}</span>
             <span className="text-[10px] font-black text-[#3D2B1F44] uppercase tracking-tighter">{stat.label}</span>
           </div>
@@ -120,17 +154,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onUpdateProfile, on
           <textarea 
             value={reflection}
             onChange={(e) => setReflection(e.target.value)}
-            placeholder="예: 오늘 계획했던 퀘스트를 대부분 완료해서 뿌듯해요. 하지만 오후에는 조금 집중력이 떨어졌어요."
-            className="w-full h-24 p-4 bg-[#F4F2F0] rounded-2xl outline-none text-sm font-bold text-[#3D2B1F] placeholder:text-gray-300 resize-none"
+            placeholder="예: 오늘 계획했던 퀘스트를 대부분 완료해서 뿌듯해요."
+            className="w-full h-24 p-4 bg-[#F4F2F0] rounded-2xl outline-none text-sm font-bold text-[#3D2B1F] resize-none"
           />
           <button 
             onClick={handleSubmitFeedback}
             disabled={isSubmittingFeedback || !reflection.trim()}
-            className={`w-full mt-4 py-3 rounded-2xl font-black text-white transition-all border-b-4 ${
-              isSubmittingFeedback || !reflection.trim() 
-              ? 'bg-gray-300 border-gray-400 cursor-not-allowed' 
-              : 'bg-[#2D4F1E] border-[#1E3614] hover:brightness-110 active:translate-y-1 active:shadow-none'
-            }`}
+            className="w-full mt-4 py-3 rounded-2xl font-black text-white bg-[#2D4F1E] border-b-4 border-[#1E3614] disabled:bg-gray-300 disabled:border-gray-400"
           >
             {isSubmittingFeedback ? '분석 중...' : 'AI 인사이트 받기 ✨'}
           </button>
@@ -139,51 +169,65 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onUpdateProfile, on
         {/* 피드백 히스토리 */}
         <div className="flex flex-col gap-3 mt-2">
           {user.feedbackHistory.map((entry) => (
-            <div key={entry.id} className="bg-[#3D2B1F] p-5 rounded-3xl border-2 border-[#1E3614] shadow-lg animate-slideDown">
+            <div key={entry.id} className="bg-[#3D2B1F] p-5 rounded-3xl border-2 border-[#1E3614] shadow-lg">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[10px] font-black text-white/40 mono uppercase tracking-widest">{entry.date}</span>
-                <span className="text-[10px] font-black text-green-400 mono uppercase">Ref: Log_OK</span>
               </div>
-              <div className="flex flex-col gap-4">
-                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                  <p className="text-[11px] text-white/80 italic">"{entry.userReflection}"</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="text-2xl">🤖</span>
-                  <div className="flex-1">
-                    <p className="text-xs text-green-400 font-bold leading-relaxed">
-                      {entry.aiAdvice}
-                    </p>
-                  </div>
-                </div>
+              <div className="bg-white/5 p-3 rounded-xl border border-white/10 mb-3">
+                <p className="text-[11px] text-white/80 italic">"{entry.userReflection}"</p>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-2xl">🤖</span>
+                <p className="text-xs text-green-400 font-bold leading-relaxed">{entry.aiAdvice}</p>
               </div>
             </div>
           ))}
-          {user.feedbackHistory.length === 0 && (
-            <div className="text-center p-6 border-2 border-dashed border-white/10 rounded-3xl">
-              <p className="text-white/30 text-xs font-bold uppercase tracking-widest">기록된 피드백이 없습니다.</p>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* 시스템 로그 요약 */}
-      <div className="bg-[#3D2B1F] p-6 rounded-[2.5rem] border-2 border-[#1E3614] relative overflow-hidden shadow-xl mt-4">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <span className="text-7xl text-white font-black">{"{ }"}</span>
+      {/* 데이터 관리 섹션 */}
+      <section className="bg-white/10 p-6 rounded-[2.5rem] border-2 border-white/10 mt-2">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-black text-white uppercase tracking-widest">데이터 금고</h3>
+          <span className="flex items-center gap-1">
+             <span className="w-2 h-2 bg-green-500 rounded-full led-blink"></span>
+             <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">Local Active</span>
+          </span>
         </div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-green-400 rounded-full led-blink"></div>
-            <h4 className="font-black text-green-400 text-[10px] uppercase tracking-[0.3em]">Core_System.log</h4>
-          </div>
-          <p className="text-[10px] text-white/60 leading-relaxed font-bold">
-            [안내] 완벽한 계획보다는 지속 가능한 엔진 가동이 중요합니다. <br/>
-            [상태] 현재 피로도 외란 감지기 가동 중. <br/>
-            [메시지] 오늘도 작은 스텝으로 시스템 오차를 줄여보세요.
-          </p>
+        
+        <p className="text-[11px] text-white/60 font-bold mb-4 leading-relaxed">
+          모든 데이터는 브라우저에 자동 저장됩니다. 기기를 옮기거나 브라우저를 초기화할 계획이라면 백업 파일을 만드세요.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button 
+            onClick={handleExportData}
+            className="bg-white text-[#2D4F1E] py-3 rounded-xl font-black text-xs border-b-4 border-gray-200 active:translate-y-1 active:border-b-0 transition-all"
+          >
+            💾 데이터 내보내기
+          </button>
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-[#3D2B1F] text-white py-3 rounded-xl font-black text-xs border-b-4 border-[#1E3614] active:translate-y-1 active:border-b-0 transition-all"
+          >
+            📂 데이터 가져오기
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImportData} 
+            accept=".json" 
+            className="hidden" 
+          />
         </div>
-      </div>
+
+        <button 
+          onClick={handleResetData}
+          className="w-full mt-6 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] hover:text-red-400 transition-colors"
+        >
+          [!] Reset System Data
+        </button>
+      </section>
     </div>
   );
 };

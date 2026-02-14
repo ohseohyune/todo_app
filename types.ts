@@ -22,6 +22,7 @@ export interface FeedbackEntry {
 export interface GardenPlant {
   id: string;
   type: string; // 🌸, 🌿, 🌳, 🌻, 🌵
+  category?: string; // 식물이 어떤 활동으로 자라났는지 기록
   position: number;
   grownAt: string;
 }
@@ -31,16 +32,18 @@ export interface User {
   nickname: string;
   avatar: string;
   streakCount: number;
+  maxStreak: number;
   lastActiveDate: string | null;
   level: number;
   totalXP: number;
   leagueTier: LeagueTier;
   feedbackHistory: FeedbackEntry[];
   receivedCheers: number;
+  totalCompletedTasks: number;
   inventory: {
     streakFreeze: number;
   };
-  garden: GardenPlant[]; // 추가: 정원에 자라난 식물들
+  garden: GardenPlant[];
 }
 
 export interface Friend {
@@ -67,6 +70,7 @@ export interface MicroTask {
   id: string;
   macroTaskId: string;
   title: string;
+  category?: string; // 상위 태스크의 카테고리 전파
   orderIndex: number;
   durationEstMin: number;
   difficulty: number;
