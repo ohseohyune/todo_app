@@ -4,7 +4,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>QuestToDo - Earthy Cockpit</title>
+    <title>QuestToDo</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -22,7 +25,7 @@
         margin: 0;
         -webkit-tap-highlight-color: transparent;
         overflow: hidden; 
-        overscroll-behavior-y: none; /* 브라우저 기본 바운스 방지 */
+        overscroll-behavior-y: none;
       }
       .mono { font-family: 'JetBrains Mono', monospace; }
       .duo-card {
@@ -51,14 +54,10 @@
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
-        overscroll-behavior-y: contain; /* 내부 스크롤 시 바디 스크롤 방지 */
+        overscroll-behavior-y: contain;
       }
       .scroll-container::-webkit-scrollbar {
         display: none;
-      }
-      
-      input:focus {
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
       }
     </style>
     <script type="importmap">
@@ -78,5 +77,15 @@
   <body>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
+    <script>
+      // 서비스 워커 등록 (PWA 핵심)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

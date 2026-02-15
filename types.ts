@@ -27,29 +27,10 @@ export interface FeedbackEntry {
   aiAdvice: string;
 }
 
-export interface GardenPlant {
-  id: string;
-  type: string; // 🌸, 🌿, 🌳, 🌻, 🌵
-  category?: string;
-  position: number;
-  grownAt: string;
-}
-
-// Added Friend interface to support FriendsScreen.tsx
-export interface Friend {
-  id: string;
-  nickname: string;
-  avatar: string;
-  level: number;
-  streakCount: number;
-  currentTaskTitle?: string;
-  cheeredToday: boolean;
-}
-
 export interface User {
   id: string;
   nickname: string;
-  avatar: string; // Emoji or Image URL
+  avatar: string;
   streakCount: number;
   maxStreak: number;
   lastActiveDate: string | null;
@@ -62,17 +43,14 @@ export interface User {
   inventory: {
     streakFreeze: number;
   };
-  garden: GardenPlant[];
   unlockedBadges: string[];
-  // 새 필드: 시간 예측 정확도 (최근 완료 태스크들의 실제/예상 비율 평균)
-  recentAccuracyRatio?: number; 
+  recentAccuracyRatio: number; // 시간 예측 정확도 (1.0 기준)
 }
 
 export interface MacroTask {
   id: string;
   title: string;
   category: string;
-  deadline?: string;
   createdAt: string;
   status: TaskStatus;
 }
@@ -84,7 +62,7 @@ export interface MicroTask {
   category?: string;
   orderIndex: number;
   durationEstMin: number;
-  actualDurationMin?: number; // 새 필드: 실제 걸린 시간
+  actualDurationMin?: number; // 실제 걸린 시간
   difficulty: number;
   frictionScore: number;
   xpReward: number;
@@ -100,4 +78,15 @@ export interface DailyQuest {
   currentValue: number;
   completed: boolean;
   xpReward: number;
+}
+
+// Added Friend interface to fix missing export error in FriendsScreen.tsx
+export interface Friend {
+  id: string;
+  nickname: string;
+  avatar: string;
+  level: number;
+  streakCount: number;
+  currentTaskTitle?: string;
+  cheeredToday: boolean;
 }

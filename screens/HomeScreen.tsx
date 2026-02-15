@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { User, MicroTask, DailyQuest, TaskStatus } from '../types';
 
 interface HomeScreenProps {
@@ -7,122 +7,75 @@ interface HomeScreenProps {
   microTasks: MicroTask[];
   dailyQuests: DailyQuest[];
   onStartQuest: (task: MicroTask) => void;
-  onMoveTask: (id: string, direction: 'up' | 'down') => void;
-  cheerNotification?: string | null;
-  onClearNotification?: () => void;
-  onGoToTab?: (tab: string) => void;
-  onResetQuests?: () => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, onStartQuest, onMoveTask, cheerNotification, onClearNotification, onGoToTab, onResetQuests }) => {
-  const [resetConfirmMode, setResetConfirmMode] = useState(false);
-
-  useEffect(() => {
-    let timer: any;
-    if (resetConfirmMode) {
-      timer = setTimeout(() => setResetConfirmMode(false), 2000);
-    }
-    return () => clearTimeout(timer);
-  }, [resetConfirmMode]);
-
-  const handleResetClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!resetConfirmMode) {
-      setResetConfirmMode(true);
-    } else {
-      if (onResetQuests) {
-        onResetQuests();
-        setResetConfirmMode(false);
-      }
-    }
-  };
-
+const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, onStartQuest }) => {
   return (
     <div className="flex flex-col gap-6 pb-10">
-      {cheerNotification && (
-        <div className="bg-[#3D2B1F] p-4 rounded-3xl border-2 border-[#A7C957] shadow-lg flex items-center justify-between">
-          <p className="text-xs font-black text-white">{cheerNotification}</p>
-          <button onClick={onClearNotification} className="text-white text-xl px-2">×</button>
-        </div>
-      )}
-
-      {/* 상태 대시보드 */}
-      <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-2 border-[#1E3614]">
-        <div className="flex items-center gap-4 mb-3">
-          <div className="text-4xl">{user.avatar}</div>
+      {/* 유저 상태 */}
+      <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-4 border-[#1E3614]">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="text-5xl">{user.avatar}</div>
           <div className="flex-1">
             <h2 className="text-xl font-black text-[#3D2B1F]">{user.nickname}</h2>
-            <p className="text-[10px] font-bold text-[#2D4F1E] uppercase">LV {user.level} • {user.streakCount}D STREAK</p>
+            <div className="flex gap-2 text-[10px] font-bold text-[#2D4F1E] uppercase">
+              <span>LV {user.level}</span>
+              <span>🔥 {user.streakCount}일 스트릭</span>
+            </div>
           </div>
         </div>
-        <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-[#A7C957]" style={{ width: `${(user.totalXP % 1000) / 10}%` }}></div>
+        <div className="h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+          <div className="h-full bg-[#A7C957] transition-all duration-1000" style={{ width: `${(user.totalXP % 1000) / 10}%` }}></div>
         </div>
-        {user.recentAccuracyRatio && user.recentAccuracyRatio !== 1 && (
-          <div className="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-tight text-center">
-            최근 집중 효율 지표: {Math.round(user.recentAccuracyRatio * 100)}% 📊
-          </div>
+        {user.recentAccuracyRatio !== 1 && (
+          <p className="mt-3 text-[9px] font-black text-gray-400 text-center uppercase tracking-widest">
+            집중 효율 지표: {Math.round(user.recentAccuracyRatio * 100)}% 📊
+          </p>
         )}
       </div>
 
-      {/* 데일리 퀘스트 & 리셋 버튼 */}
-      <section className="bg-white/10 p-5 rounded-[2.5rem] border-2 border-white/10 relative">
-        <div className="flex justify-between items-center mb-4 relative z-50">
-          <h3 className="text-xs font-black text-white uppercase tracking-widest">Daily Quests</h3>
-          <button 
-            type="button"
-            onClick={handleResetClick}
-            className={`text-[9px] font-black px-4 py-2 rounded-full transition-all duration-200 border-2 shadow-[0_4px_0_#1E3614] active:translate-y-1 active:shadow-none pointer-events-auto z-[100] ${
-              resetConfirmMode ? 'bg-red-500 border-white text-white scale-110' : 'bg-[#A7C957] border-[#1E3614] text-[#1E3614]'
-            }`}
-          >
-            {resetConfirmMode ? "⚠️ 진짜 삭제?" : "🔄 퀘스트 리셋"}
-          </button>
-        </div>
+      {/* 데일리 퀘스트 */}
+      <section className="bg-white/10 p-5 rounded-[2rem] border-2 border-white/10">
+        <h3 className="text-xs font-black text-white uppercase tracking-widest mb-4">Daily Quests</h3>
         <div className="space-y-3">
           {dailyQuests.map(q => (
-            <div key={q.id} className={`flex items-center gap-3 p-3 rounded-2xl ${q.completed ? 'bg-green-500/20' : 'bg-white/5'}`}>
+            <div key={q.id} className={`p-3 rounded-2xl flex items-center gap-3 ${q.completed ? 'bg-green-500/20' : 'bg-white/5'}`}>
               <div className="flex-1">
                 <p className={`text-[11px] font-bold ${q.completed ? 'text-green-400 line-through' : 'text-white'}`}>{q.title}</p>
                 <div className="h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
-                  <div className="h-full bg-green-500 transition-all" style={{ width: `${(q.currentValue / q.targetValue) * 100}%` }} />
+                  <div className="h-full bg-green-500" style={{ width: `${(q.currentValue / q.targetValue) * 100}%` }} />
                 </div>
               </div>
+              {q.completed && <span className="text-lg">✅</span>}
             </div>
           ))}
         </div>
       </section>
 
-      {/* 액티브 퀘스트 리스트 */}
+      {/* 퀘스트 목록 */}
       <section>
-        <div className="flex justify-between items-center mb-3 ml-2">
-          <h3 className="text-lg font-black text-white uppercase tracking-tight">Active Quests</h3>
-        </div>
-        <div className="flex flex-col gap-2">
-          {microTasks.length > 0 ? microTasks.map((task) => (
-            <div key={task.id} className={`flex items-center gap-4 p-4 rounded-3xl transition-all ${task.status === TaskStatus.DONE ? 'opacity-40 bg-white/10' : 'bg-white'}`}>
+        <h3 className="text-lg font-black text-white uppercase tracking-tight mb-3 ml-2">Active Quests</h3>
+        <div className="flex flex-col gap-3">
+          {microTasks.filter(t => t.status !== TaskStatus.DONE).map((task) => (
+            <div key={task.id} className="bg-white p-5 rounded-[2rem] shadow-lg flex items-center gap-4">
               <div className="flex-1">
-                <p className={`text-sm font-black ${task.status === TaskStatus.DONE ? 'line-through text-white' : 'text-[#3D2B1F]'}`}>{task.title}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[9px] font-bold text-[#2D4F1E] opacity-60 uppercase">{task.durationEstMin}분 목표</span>
-                  {task.status === TaskStatus.DONE && task.actualDurationMin && (
-                    <span className="text-[9px] font-black text-white bg-green-600/50 px-2 py-0.5 rounded-full">
-                      실제 {task.actualDurationMin}분 소요
-                    </span>
-                  )}
-                </div>
+                <h4 className="font-black text-[#3D2B1F] text-sm">{task.title}</h4>
+                <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">예상 몰입 시간: {task.durationEstMin}분</p>
               </div>
-              {task.status === TaskStatus.TODO && (
-                <button onClick={() => onStartQuest(task)} className="bg-[#2D4F1E] text-white px-5 py-2 rounded-2xl font-black text-xs shadow-[0_3px_0_#1E3614] active:translate-y-1 active:shadow-none">시작</button>
-              )}
-              {task.status === TaskStatus.DONE && <div className="text-xl">✅</div>}
+              <button onClick={() => onStartQuest(task)} className="bg-[#2D4F1E] text-white px-6 py-2.5 rounded-2xl font-black text-xs shadow-[0_4px_0_#1E3614] active:translate-y-1 active:shadow-none">시작</button>
             </div>
-          )) : (
-            <div className="p-10 border-4 border-dashed border-white/5 rounded-[2.5rem] text-center text-white/20 font-black">
-              새로운 목표를 추가하세요!
+          ))}
+          
+          {/* 완료된 항목 */}
+          {microTasks.filter(t => t.status === TaskStatus.DONE).map((task) => (
+            <div key={task.id} className="bg-white/10 p-4 rounded-2xl flex items-center gap-4 opacity-50">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white line-through">{task.title}</p>
+                <p className="text-[9px] font-black text-green-400 uppercase">실제 {task.actualDurationMin}분 소요</p>
+              </div>
+              <div className="text-xl">✅</div>
             </div>
-          )}
+          ))}
         </div>
       </section>
     </div>

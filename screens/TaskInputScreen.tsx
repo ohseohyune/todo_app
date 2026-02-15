@@ -25,10 +25,11 @@ const TaskInputScreen: React.FC<TaskInputScreenProps> = ({ onCreate, user }) => 
     if (!title.trim()) return;
     
     setState('generating');
+    // Fixed: replaced 'streak' with 'accuracyRatio' to match the userStats parameter type in decomposeTask
     const tasks = await decomposeTask(title, category, { 
       level: user.level, 
-      streak: user.streakCount,
-      energyMode 
+      energyMode,
+      accuracyRatio: user.recentAccuracyRatio 
     });
     
     if (tasks && tasks.length > 0) {
@@ -42,10 +43,11 @@ const TaskInputScreen: React.FC<TaskInputScreenProps> = ({ onCreate, user }) => 
 
   const handleRefine = async (feedback: string) => {
     setState('generating');
+    // Fixed: replaced 'streak' with 'accuracyRatio' to match the userStats parameter type in decomposeTask
     const tasks = await decomposeTask(
       title, 
       category, 
-      { level: user.level, streak: user.streakCount, energyMode },
+      { level: user.level, energyMode, accuracyRatio: user.recentAccuracyRatio },
       feedback,
       generatedTasks
     );
