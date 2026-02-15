@@ -88,7 +88,6 @@ const App: React.FC = () => {
   }, []);
 
   const handleManualReset = () => {
-    // 즉각적인 강제 초기화
     setDailyQuests(INITIAL_DAILY_QUESTS.map(q => ({ ...q })));
     setMicroTasks([]);
     setMacroTasks([]);
@@ -158,21 +157,44 @@ const App: React.FC = () => {
   const handleTaskComplete = (microTaskId: string, actualMin: number) => {
     const taskIndex = microTasks.findIndex(t => t.id === microTaskId);
     if (taskIndex === -1) return;
+    
     const completedTask = microTasks[taskIndex];
     const gainedXP = completedTask.xpReward;
+    
+    // 시간 정확도 계산 로직 (Accuracy Ratio)
+    // 30분 예상인데 45분 걸렸다면 ratio는 1.5가 됨 (다음번엔 1.5배 시간을 더 주도록 AI에게 힌트 제공)
+    const currentRatio = actualMin / completedTask.durationEstMin;
+    const oldRatio = user.recentAccuracyRatio || 1.0;
+    // 이동 평균으로 부드럽게 업데이트 (급격한 변화 방지)
+    const newRatio = (oldRatio * 4 + currentRatio) / 5;
+
     const updatedMicroTasks = [...microTasks];
     updatedMicroTasks[taskIndex] = { ...completedTask, status: TaskStatus.DONE, actualDurationMin: actualMin };
     setMicroTasks(updatedMicroTasks);
+    
     const now = new Date();
     const isNewDay = !user.lastActiveDate || new Date(user.lastActiveDate).toDateString() !== now.toDateString();
     let newStreak = user.streakCount + (isNewDay ? 1 : 0);
     const newTotalXP = user.totalXP + gainedXP;
     const newLevel = Math.floor(newTotalXP / 1000) + 1;
+    
     if (newLevel > user.level) setLevelUpModal({ level: newLevel });
-    const updatedUser = { ...user, totalXP: newTotalXP, level: newLevel, streakCount: newStreak, lastActiveDate: now.toISOString(), totalCompletedTasks: user.totalCompletedTasks + 1 };
+    
+    const updatedUser: User = { 
+      ...user, 
+      totalXP: newTotalXP, 
+      level: newLevel, 
+      streakCount: newStreak, 
+      lastActiveDate: now.toISOString(), 
+      totalCompletedTasks: user.totalCompletedTasks + 1,
+      totalFocusMinutes: (user.totalFocusMinutes || 0) + actualMin,
+      recentAccuracyRatio: newRatio
+    };
+    
     setUser(updatedUser);
     updateQuestProgress('q1', 1);
     updateQuestProgress('q2', gainedXP);
+    
     const nextTask = updatedMicroTasks.find(t => t.status === TaskStatus.TODO);
     setCurrentQuest(nextTask || null);
   };
@@ -189,7 +211,6 @@ const App: React.FC = () => {
     return true;
   };
 
-  // Fixed Fix: Implemented handleAddFeedback to connect ProfileScreen with AI advice and update quest state
   const handleAddFeedback = async (reflection: string) => {
     const advice = await getAIAdvice(reflection, user);
     const newEntry: FeedbackEntry = {

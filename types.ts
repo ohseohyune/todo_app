@@ -35,6 +35,17 @@ export interface GardenPlant {
   grownAt: string;
 }
 
+// Added Friend interface to support FriendsScreen.tsx
+export interface Friend {
+  id: string;
+  nickname: string;
+  avatar: string;
+  level: number;
+  streakCount: number;
+  currentTaskTitle?: string;
+  cheeredToday: boolean;
+}
+
 export interface User {
   id: string;
   nickname: string;
@@ -55,17 +66,6 @@ export interface User {
   unlockedBadges: string[];
   // 새 필드: 시간 예측 정확도 (최근 완료 태스크들의 실제/예상 비율 평균)
   recentAccuracyRatio?: number; 
-}
-
-// Fixed Error: Added missing Friend interface required by FriendsScreen.tsx
-export interface Friend {
-  id: string;
-  nickname: string;
-  avatar: string;
-  level: number;
-  streakCount: number;
-  currentTaskTitle?: string;
-  cheeredToday: boolean;
 }
 
 export interface MacroTask {

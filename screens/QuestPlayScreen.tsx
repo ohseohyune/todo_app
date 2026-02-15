@@ -9,37 +9,51 @@ interface QuestPlayScreenProps {
 }
 
 const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, onTooHard }) => {
+  const [accumulatedMs, setAccumulatedMs] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [displaySeconds, setDisplaySeconds] = useState(0);
   const [timeLeft, setTimeLeft] = useState(quest.durationEstMin * 60);
+
   const [isActive, setIsActive] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
-  
-  const startTimeRef = useRef<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [completionSummary, setCompletionSummary] = useState<string | null>(null);
 
   useEffect(() => {
+    setAccumulatedMs(0);
+    setStartTime(null);
+    setDisplaySeconds(0);
     setTimeLeft(quest.durationEstMin * 60);
     setIsActive(false);
     setShowConfetti(false);
     setIsFinishing(false);
-    setElapsedSeconds(0);
-    startTimeRef.current = null;
-  }, [quest.id]);
+    setCompletionSummary(null);
+  }, [quest.id, quest.durationEstMin]);
 
   useEffect(() => {
     let interval: any = null;
-    if (isActive) {
+    if (isActive && startTime !== null) {
       interval = setInterval(() => {
-        setTimeLeft((t) => Math.max(0, t - 1));
-        setElapsedSeconds((s) => s + 1);
-      }, 1000);
+        const now = Date.now();
+        const currentSessionElapsed = now - startTime;
+        const totalElapsed = accumulatedMs + currentSessionElapsed;
+        
+        const elapsedSec = Math.floor(totalElapsed / 1000);
+        setDisplaySeconds(elapsedSec);
+        setTimeLeft(Math.max(0, (quest.durationEstMin * 60) - elapsedSec));
+      }, 100);
     }
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isActive, startTime, accumulatedMs, quest.durationEstMin]);
 
   const handleStart = () => {
-    if (!startTimeRef.current) {
-      startTimeRef.current = Date.now();
+    if (!isActive) {
+      setStartTime(Date.now());
+    } else {
+      if (startTime !== null) {
+        setAccumulatedMs(prev => prev + (Date.now() - startTime));
+      }
+      setStartTime(null);
     }
     setIsActive(!isActive);
   };
@@ -47,18 +61,28 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
   const handleComplete = () => {
     if (isFinishing) return;
     
+    const finalTotalMs = accumulatedMs + (startTime ? (Date.now() - startTime) : 0);
+    const actualMin = Math.max(1, Math.round(finalTotalMs / 60000));
+
     if ('vibrate' in navigator) {
       navigator.vibrate([100, 30, 100]);
     }
+
     setIsFinishing(true);
     setShowConfetti(true);
     
-    // 분 단위로 계산 (최소 1분 보장, 타이머 안 켰으면 1분으로 처리)
-    const actualMin = Math.max(1, Math.round(elapsedSeconds / 60) || 1);
+    // 완료 문구 생성
+    let summary = `${actualMin}분 동안 몰입하셨습니다!`;
+    if (actualMin > quest.durationEstMin) {
+      summary = `목표보다 ${actualMin - quest.durationEstMin}분 더 깊게 몰입하셨네요! 대단해요.`;
+    } else if (actualMin < quest.durationEstMin) {
+      summary = `목표보다 빠르게 ${actualMin}분 만에 완료하셨네요! 효율 최고입니다.`;
+    }
+    setCompletionSummary(summary);
     
     setTimeout(() => {
       onComplete(actualMin);
-    }, 1500);
+    }, 2500);
   };
 
   return (
@@ -71,7 +95,7 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
           {quest.title}
         </h2>
         <div className="mt-1 text-[10px] text-white/40 font-bold">
-          목표 시간: {quest.durationEstMin}분 • 현재 경과: {Math.floor(elapsedSeconds / 60)}분
+          목표 시간: {quest.durationEstMin}분 • 현재 경과: {Math.floor(displaySeconds / 60)}분 {displaySeconds % 60}초
         </div>
       </div>
 
@@ -86,16 +110,24 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
           </div>
         )}
 
-        <div className={`relative flex-shrink-0 w-64 h-64 flex items-center justify-center rounded-[4rem] border-4 border-[#1E3614] shadow-2xl transition-all duration-1000 ${isActive ? 'bg-white scale-105' : 'bg-white/90'}`}>
-          <div className="z-10 text-center">
-            <span className="text-6xl font-black text-[#3D2B1F] mono tracking-tighter">
-              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-            </span>
-            <div className="mt-2 text-[10px] font-black text-[#2D4F1E] uppercase tracking-widest animate-pulse">
-              {isActive ? '몰입 중...' : '준비 완료'}
+        {isFinishing && completionSummary ? (
+          <div className="z-50 bg-white p-8 rounded-[3rem] shadow-2xl border-4 border-[#A7C957] animate-bounceIn mx-4">
+            <div className="text-5xl mb-4">🎖️</div>
+            <h3 className="text-xl font-black text-[#3D2B1F] leading-tight">몰입 기록</h3>
+            <p className="mt-2 text-sm font-bold text-[#2D4F1E]">{completionSummary}</p>
+          </div>
+        ) : (
+          <div className={`relative flex-shrink-0 w-64 h-64 flex items-center justify-center rounded-[4rem] border-4 border-[#1E3614] shadow-2xl transition-all duration-1000 ${isActive ? 'bg-white scale-105' : 'bg-white/90'}`}>
+            <div className="z-10 text-center">
+              <span className="text-6xl font-black text-[#3D2B1F] mono tracking-tighter">
+                {Math.floor(displaySeconds / 60)}:{(displaySeconds % 60).toString().padStart(2, '0')}
+              </span>
+              <div className="mt-2 text-[10px] font-black text-[#2D4F1E] uppercase tracking-widest animate-pulse">
+                {isActive ? '몰입 중...' : '준비 완료'}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="p-6 rounded-[2.5rem] bg-white w-full max-w-sm shadow-xl text-left">
           <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">성공 기준</h3>
@@ -107,20 +139,22 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
       </div>
 
       <div className="mt-8 mb-6 flex flex-col gap-3 px-2">
-        <button 
-          onClick={handleStart} 
-          disabled={isFinishing}
-          className={`py-4 rounded-2xl font-black text-lg transition-all ${isFinishing ? 'opacity-0' : (isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]')}`}
-        >
-          {isActive ? '잠시 멈춤' : '몰입 시작 🚀'}
-        </button>
-        <button 
-          onClick={handleComplete} 
-          disabled={isFinishing} 
-          className={`py-4 rounded-2xl font-black text-xl shadow-xl transition-all ${isFinishing ? 'bg-green-500 text-white scale-105' : 'bg-white text-[#2D4F1E] active:translate-y-1'}`}
-        >
-          {isFinishing ? '참 잘했어요! ✨' : '완료했습니다!'}
-        </button>
+        {!isFinishing && (
+          <>
+            <button 
+              onClick={handleStart} 
+              className={`py-4 rounded-2xl font-black text-lg transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-[#3D2B1F] text-white shadow-[0_4px_0_#1E3614]'}`}
+            >
+              {isActive ? '잠시 멈춤' : '몰입 시작 🚀'}
+            </button>
+            <button 
+              onClick={handleComplete} 
+              className="py-4 rounded-2xl font-black text-xl shadow-xl transition-all bg-white text-[#2D4F1E] active:translate-y-1"
+            >
+              완료했습니다!
+            </button>
+          </>
+        )}
       </div>
 
       <style>{`
@@ -128,7 +162,14 @@ const QuestPlayScreen: React.FC<QuestPlayScreenProps> = ({ quest, onComplete, on
           0% { transform: translateY(0) rotate(0); opacity: 1; }
           100% { transform: translateY(-500px) rotate(720deg); opacity: 0; }
         }
+        @keyframes bounceIn {
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.05); opacity: 1; }
+          70% { transform: scale(0.9); }
+          100% { transform: scale(1); }
+        }
         .animate-float-up { animation: float-up 2s ease-out forwards; }
+        .animate-bounceIn { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
       `}</style>
     </div>
   );

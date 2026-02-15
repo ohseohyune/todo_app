@@ -59,6 +59,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, 
         <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
           <div className="h-full bg-[#A7C957]" style={{ width: `${(user.totalXP % 1000) / 10}%` }}></div>
         </div>
+        {user.recentAccuracyRatio && user.recentAccuracyRatio !== 1 && (
+          <div className="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-tight text-center">
+            최근 집중 효율 지표: {Math.round(user.recentAccuracyRatio * 100)}% 📊
+          </div>
+        )}
       </div>
 
       {/* 데일리 퀘스트 & 리셋 버튼 */}
@@ -99,7 +104,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, microTasks, dailyQuests, 
             <div key={task.id} className={`flex items-center gap-4 p-4 rounded-3xl transition-all ${task.status === TaskStatus.DONE ? 'opacity-40 bg-white/10' : 'bg-white'}`}>
               <div className="flex-1">
                 <p className={`text-sm font-black ${task.status === TaskStatus.DONE ? 'line-through text-white' : 'text-[#3D2B1F]'}`}>{task.title}</p>
-                <span className="text-[9px] font-bold text-[#2D4F1E] opacity-60 uppercase">{task.durationEstMin}분 예상</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[9px] font-bold text-[#2D4F1E] opacity-60 uppercase">{task.durationEstMin}분 목표</span>
+                  {task.status === TaskStatus.DONE && task.actualDurationMin && (
+                    <span className="text-[9px] font-black text-white bg-green-600/50 px-2 py-0.5 rounded-full">
+                      실제 {task.actualDurationMin}분 소요
+                    </span>
+                  )}
+                </div>
               </div>
               {task.status === TaskStatus.TODO && (
                 <button onClick={() => onStartQuest(task)} className="bg-[#2D4F1E] text-white px-5 py-2 rounded-2xl font-black text-xs shadow-[0_3px_0_#1E3614] active:translate-y-1 active:shadow-none">시작</button>
